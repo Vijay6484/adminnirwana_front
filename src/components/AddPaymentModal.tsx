@@ -54,54 +54,79 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
     setLoading(true);
     setError(null);
 
-    try {
+    // Commented out API call - using mock payment processing
+    // try {
+    //   const paymentAmount = paymentType === 'full' ? getRemainingAmount() : parseInt(amount);
+    //   
+    //   if (!paymentAmount || paymentAmount <= 0) {
+    //     throw new Error('Please enter a valid payment amount');
+    //   }
+
+    //   if (paymentAmount > getRemainingAmount()) {
+    //     throw new Error('Payment amount cannot exceed remaining balance');
+    //   }
+
+    //   const paymentData = {
+    //     amount: paymentAmount,
+    //     payment_method: paymentMethod,
+    //     transaction_id: transactionId || undefined,
+    //     notes: notes || undefined
+    //   };
+
+    //   const response = await fetch(`${apiBaseUrl}/bookings/${booking.id}/payments`, {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //     },
+    //     body: JSON.stringify(paymentData),
+    //   });
+
+    //   if (!response.ok) {
+    //     const errorData = await response.json().catch(() => ({}));
+    //     throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    //   }
+
+    //   const result = await response.json();
+    //   
+    //   if (result.success) {
+    //     // Call the callback to refresh the bookings list
+    //     if (onPaymentAdded) {
+    //       onPaymentAdded();
+    //     }
+    //     onClose();
+    //   } else {
+    //     throw new Error(result.message || 'Failed to add payment');
+    //   }
+    // } catch (err) {
+    //   console.error('Error adding payment:', err);
+    //   setError(err instanceof Error ? err.message : 'Failed to add payment');
+    // } finally {
+    //   setLoading(false);
+    // }
+    
+    // Mock payment processing
+    setTimeout(() => {
       const paymentAmount = paymentType === 'full' ? getRemainingAmount() : parseInt(amount);
       
       if (!paymentAmount || paymentAmount <= 0) {
-        throw new Error('Please enter a valid payment amount');
+        setError('Please enter a valid payment amount');
+        setLoading(false);
+        return;
       }
 
       if (paymentAmount > getRemainingAmount()) {
-        throw new Error('Payment amount cannot exceed remaining balance');
+        setError('Payment amount cannot exceed remaining balance');
+        setLoading(false);
+        return;
       }
-
-      const paymentData = {
-        amount: paymentAmount,
-        payment_method: paymentMethod,
-        transaction_id: transactionId || undefined,
-        notes: notes || undefined
-      };
-
-      const response = await fetch(`${apiBaseUrl}/bookings/${booking.id}/payments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(paymentData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
       
-      if (result.success) {
-        // Call the callback to refresh the bookings list
-        if (onPaymentAdded) {
-          onPaymentAdded();
-        }
-        onClose();
-      } else {
-        throw new Error(result.message || 'Failed to add payment');
+      // Mock success
+      if (onPaymentAdded) {
+        onPaymentAdded();
       }
-    } catch (err) {
-      console.error('Error adding payment:', err);
-      setError(err instanceof Error ? err.message : 'Failed to add payment');
-    } finally {
+      onClose();
       setLoading(false);
-    }
+    }, 1000);
   };
 
   // Update amount when payment type changes

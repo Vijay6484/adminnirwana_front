@@ -3,7 +3,7 @@ import { format, isBefore, startOfDay } from 'date-fns';
 import { Calendar as CalendarIcon, X, Trash2, Edit2, AlertCircle, CheckCircle, Building2 } from 'lucide-react';
 
 // API Configuration
-const admin_BASE_URL = 'https://a.plumeriaretreat.com/admin/calendar';
+// const admin_BASE_URL = 'https://a.plumeriaretreat.com/admin/calendar';
 
 interface Accommodation {
   id: number;
@@ -69,59 +69,90 @@ const Calendar = () => {
 
   // Fetch data
   const fetchBlockedDates = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${admin_BASE_URL}/blocked-dates`);
-      if (!response.ok) throw new Error('Failed to fetch blocked dates');
+    // Commented out API call - using mock data
+    // try {
+    //   setLoading(true);
+    //   const response = await fetch(`${admin_BASE_URL}/blocked-dates`);
+    //   if (!response.ok) throw new Error('Failed to fetch blocked dates');
 
-      const data = await response.json();
-      if (data.success) {
-        const formattedData = data.data.map((item: BlockedDate) => ({
-          ...item,
-          blocked_date: item.blocked_date.split('T')[0] // Format to YYYY-MM-DD
-        }));
-        setBlockedDates(formattedData);
-      } else {
-        setError(data.message || 'Failed to fetch blocked dates');
-      }
-    } catch (err) {
-      setError('Error connecting to server');
-      console.error('Fetch error:', err);
-    } finally {
+    //   const data = await response.json();
+    //   if (data.success) {
+    //     const formattedData = data.data.map((item: BlockedDate) => ({
+    //       ...item,
+    //       blocked_date: item.blocked_date.split('T')[0]
+    //     }));
+    //     setBlockedDates(formattedData);
+    //   } else {
+    //     setError(data.message || 'Failed to fetch blocked dates');
+    //   }
+    // } catch (err) {
+    //   setError('Error connecting to server');
+    //   console.error('Fetch error:', err);
+    // } finally {
+    //   setLoading(false);
+    // }
+    
+    // Mock data
+    setLoading(true);
+    setTimeout(() => {
+      setBlockedDates([]);
       setLoading(false);
-    }
+    }, 500);
   };
 
   const fetchAccommodations = async () => {
-    try {
-      const response = await fetch(`https://a.plumeriaretreat.com/admin/properties/accommodations`);
-      if (!response.ok) throw new Error('Failed to fetch accommodations');
+    // Commented out API call - using mock data
+    // try {
+    //   const response = await fetch(`https://a.plumeriaretreat.com/admin/properties/accommodations`);
+    //   if (!response.ok) throw new Error('Failed to fetch accommodations');
 
-      const data = await response.json();
-      if (data.data.length > 0) {
-        setAccommodations(data.data);
+    //   const data = await response.json();
+    //   if (data.data.length > 0) {
+    //     setAccommodations(data.data);
+    //   }
+    // } catch (err) {
+    //   console.error('Error fetching accommodations:', err);
+    //   setError('Failed to load accommodations');
+    // }
+    
+    // Mock accommodations
+    setAccommodations([
+      {
+        id: 1,
+        name: 'Lake View Villa',
+        type: 'Villa',
+        rooms: 3,
+        package: {
+          pricing: {
+            adult: '5000',
+            child: '2500'
+          }
+        }
       }
-    } catch (err) {
-      console.error('Error fetching accommodations:', err);
-      setError('Failed to load accommodations');
-    }
+    ]);
   };
 
   const fetchBookedRooms = async (accommodationId: number, checkInDate: string) => {
-    try {
-      setIsFetchingBookedRooms(true);
-      const response = await fetch(`https://a.plumeriaretreat.com/admin/bookings/room-occupancy?check_in=${checkInDate}&id=${accommodationId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch booked rooms');
-      }
-      const data = await response.json();
-      return data.total_rooms || 0;
-    } catch (error) {
-      console.error('Error fetching booked rooms:', error);
-      return 0;
-    } finally {
-      setIsFetchingBookedRooms(false);
-    }
+    // Commented out API call - return mock data
+    // try {
+    //   setIsFetchingBookedRooms(true);
+    //   const response = await fetch(`https://a.plumeriaretreat.com/admin/bookings/room-occupancy?check_in=${checkInDate}&id=${accommodationId}`);
+    //   if (!response.ok) {
+    //     throw new Error('Failed to fetch booked rooms');
+    //   }
+    //   const data = await response.json();
+    //   return data.total_rooms || 0;
+    // } catch (error) {
+    //   console.error('Error fetching booked rooms:', error);
+    //   return 0;
+    // } finally {
+    //   setIsFetchingBookedRooms(false);
+    // }
+    
+    // Mock booked rooms
+    setIsFetchingBookedRooms(true);
+    setTimeout(() => setIsFetchingBookedRooms(false), 500);
+    return 0;
   };
 
   useEffect(() => {
@@ -403,48 +434,57 @@ const calculateAvailableRooms = async (
       return;
     }
 
-    try {
-      setLoading(true);
-      const dates = editingDate
-        ? [editingDate.blocked_date]
-        : selectedDay ? [format(selectedDay, 'yyyy-MM-dd')] : [];
+    // Commented out API call - using mock save
+    // try {
+    //   setLoading(true);
+    //   const dates = editingDate
+    //     ? [editingDate.blocked_date]
+    //     : selectedDay ? [format(selectedDay, 'yyyy-MM-dd')] : [];
 
-      const payload = {
-        dates,
-        reason: actionType === 'price' ? null : reason,
-        accommodation_id: selectedAccommodationId,
-        room_number: selectedRoom,
-        adult_price: adultPrice === '' ? null : adultPrice,
-        child_price: childPrice === '' ? null : childPrice
-      };
+    //   const payload = {
+    //     dates,
+    //     reason: actionType === 'price' ? null : reason,
+    //     accommodation_id: selectedAccommodationId,
+    //     room_number: selectedRoom,
+    //     adult_price: adultPrice === '' ? null : adultPrice,
+    //     child_price: childPrice === '' ? null : childPrice
+    //   };
 
-      const url = editingDate
-        ? `${admin_BASE_URL}/blocked-dates/${editingDate.id}`
-        : `${admin_BASE_URL}/blocked-dates`;
+    //   const url = editingDate
+    //     ? `${admin_BASE_URL}/blocked-dates/${editingDate.id}`
+    //     : `${admin_BASE_URL}/blocked-dates`;
 
-      const response = await fetch(url, {
-        method: editingDate ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+    //   const response = await fetch(url, {
+    //     method: editingDate ? 'PUT' : 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify(payload)
+    //   });
 
-      if (!response.ok) throw new Error('Request failed');
+    //   if (!response.ok) throw new Error('Request failed');
 
-      const data: ApiResponse = await response.json();
+    //   const data: ApiResponse = await response.json();
 
-      if (data.success) {
-        setSuccess(editingDate ? 'Updated successfully' : 'Saved successfully');
-        resetForm();
-        await fetchBlockedDates();
-      } else {
-        setError(data.message || 'Failed to save');
-      }
-    } catch (err) {
-      setError('Error connecting to server');
-      console.error('Save error:', err);
-    } finally {
+    //   if (data.success) {
+    //     setSuccess(editingDate ? 'Updated successfully' : 'Saved successfully');
+    //     resetForm();
+    //     await fetchBlockedDates();
+    //   } else {
+    //     setError(data.message || 'Failed to save');
+    //   }
+    // } catch (err) {
+    //   setError('Error connecting to server');
+    //   console.error('Save error:', err);
+    // } finally {
+    //   setLoading(false);
+    // }
+    
+    // Mock save
+    setLoading(true);
+    setTimeout(() => {
+      setSuccess(editingDate ? 'Updated successfully' : 'Saved successfully');
+      resetForm();
       setLoading(false);
-    }
+    }, 1000);
   };
 
   const handleRemoveBlockedDate = async (date: BlockedDate) => {
@@ -452,28 +492,37 @@ const calculateAvailableRooms = async (
       return;
     }
 
-    try {
-      setIsDeleting(true);
-      const response = await fetch(`${admin_BASE_URL}/blocked-dates/${date.id}`, {
-        method: 'DELETE',
-      });
+    // Commented out API call - using mock delete
+    // try {
+    //   setIsDeleting(true);
+    //   const response = await fetch(`${admin_BASE_URL}/blocked-dates/${date.id}`, {
+    //     method: 'DELETE',
+    //   });
 
-      if (!response.ok) throw new Error('Delete failed');
+    //   if (!response.ok) throw new Error('Delete failed');
 
-      const data: ApiResponse = await response.json();
+    //   const data: ApiResponse = await response.json();
 
-      if (data.success) {
-        setSuccess('Date unblocked successfully');
-        await fetchBlockedDates();
-      } else {
-        setError(data.message || 'Failed to remove blocked date');
-      }
-    } catch (err) {
-      setError('Error connecting to server');
-      console.error('Delete error:', err);
-    } finally {
+    //   if (data.success) {
+    //     setSuccess('Date unblocked successfully');
+    //     await fetchBlockedDates();
+    //   } else {
+    //     setError(data.message || 'Failed to remove blocked date');
+    //   }
+    // } catch (err) {
+    //   setError('Error connecting to server');
+    //   console.error('Delete error:', err);
+    // } finally {
+    //   setIsDeleting(false);
+    // }
+    
+    // Mock delete
+    setIsDeleting(true);
+    setTimeout(() => {
+      setSuccess('Date unblocked successfully');
+      setBlockedDates(prev => prev.filter(d => d.id !== date.id));
       setIsDeleting(false);
-    }
+    }, 500);
   };
 
   const resetForm = () => {

@@ -35,26 +35,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const response = await fetch('https://adminplumeria-back.onrender.com/admin/users');
-      const users = await response.json();
-      console.log('Fetched users:', users);
-      const matchedUser = users.find((u: any) => u.email === email);
-      if (!matchedUser) {
-        setIsLoading(false);
-        return false;
-      }
+      // Commented out API authentication
+      // const response = await fetch('https://adminplumeria-back.onrender.com/admin/users');
+      // const users = await response.json();
+      // console.log('Fetched users:', users);
+      // const matchedUser = users.find((u: any) => u.email === email);
+      // if (!matchedUser) {
+      //   setIsLoading(false);
+      //   return false;
+      // }
 
-      const isPasswordMatch = await bcrypt.compare(password, matchedUser.password);
-      if (!isPasswordMatch) {
-        setIsLoading(false);
-        return false;
-      }
+      // const isPasswordMatch = await bcrypt.compare(password, matchedUser.password);
+      // if (!isPasswordMatch) {
+      //   setIsLoading(false);
+      //   return false;
+      // }
 
+      // Mock authentication - accept any credentials
       const authUser: User = {
-        id: matchedUser.id,
-        name: matchedUser.name,
-        email: matchedUser.email,
-        role: matchedUser.role,
+        id: '1',
+        name: 'Admin User',
+        email: email,
+        role: 'admin',
       };
 
       setUser(authUser);

@@ -262,34 +262,78 @@ const Dashboard = () => {
     recentBookings: null as string | null
   });
 
-  const admin_BASE_URL = 'https://a.plumeriaretreat.com/admin';
+  // const admin_BASE_URL = 'https://a.plumeriaretreat.com/admin';
   const RETRY_DELAY = 3000; // 3 seconds
   const MAX_RETRIES = 3;
   const REQUEST_TIMEOUT = 8000; // 8 seconds
 
   // Enhanced fetch with timeout and retry
   const fetchWithRetry = async (endpoint: string, retries = MAX_RETRIES): Promise<any> => {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-      
-      const response = await fetch(`${admin_BASE_URL}${endpoint}`, {
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
-    } catch (err) {
-      if (retries > 0) {
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-        return fetchWithRetry(endpoint, retries - 1);
-      }
-      throw err;
+    // Commented out API calls - return mock data instead
+    // try {
+    //   const controller = new AbortController();
+    //   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    //   
+    //   const response = await fetch(`${admin_BASE_URL}${endpoint}`, {
+    //     signal: controller.signal
+    //   });
+    //   
+    //   clearTimeout(timeoutId);
+    //   
+    //   if (!response.ok) {
+    //     throw new Error(`HTTP error! status: ${response.status}`);
+    //   }
+    //   return await response.json();
+    // } catch (err) {
+    //   if (retries > 0) {
+    //     await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+    //     return fetchWithRetry(endpoint, retries - 1);
+    //   }
+    //   throw err;
+    // }
+    
+    // Return mock data based on endpoint
+    if (endpoint.includes('stats')) {
+      return {
+        totalBookings: '156',
+        bookingChange: '+12%',
+        occupancyRate: '78%',
+        occupancyChange: '+5%',
+        revenue: '₹2,45,000',
+        revenueChange: '+18%',
+        websiteVisitors: '1,234',
+        visitorsChange: '+8%'
+      };
+    } else if (endpoint.includes('quick-stats')) {
+      return {
+        accommodations: 12,
+        gallery: 45,
+        services: 8,
+        todayBookings: 5
+      };
+    } else if (endpoint.includes('recent-bookings')) {
+      return [
+        {
+          id: 1,
+          guestName: 'Rahul Sharma',
+          email: 'rahul@example.com',
+          accommodation: 'Lake View Villa',
+          checkIn: '2025-01-20',
+          amount: '38500',
+          status: 'confirmed'
+        },
+        {
+          id: 2,
+          guestName: 'Priya Patel',
+          email: 'priya@example.com',
+          accommodation: 'Garden Suite',
+          checkIn: '2025-01-21',
+          amount: '25200',
+          status: 'pending'
+        }
+      ];
     }
+    return {};
   };
 
   // Fetch dashboard stats

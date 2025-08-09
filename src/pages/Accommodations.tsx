@@ -81,7 +81,7 @@ const Accommodations: React.FC = () => {
     hasPrevPage: false
   });
 
-  const API_BASE_URL = 'https://a.plumeriaretreat.com/admin/properties';
+  // const API_BASE_URL = 'https://a.plumeriaretreat.com/admin/properties';
 
   // Fetch accommodations from backend
   useEffect(() => {
@@ -89,38 +89,77 @@ const Accommodations: React.FC = () => {
   }, [searchTerm, filters, pagination.currentPage]);
 
   const fetchAccommodations = async (filterParams: Partial<Filters> = {}) => {
-    try {
-      setLoading(true);
-      setError('');
+    // Commented out API calls - using mock data instead
+    // try {
+    //   setLoading(true);
+    //   setError('');
+    //   
+    //   const params = new URLSearchParams();
+    //   if (searchTerm) params.append('search', searchTerm);
+    //   
+    //   // Add filters
+    //   Object.entries({ ...filters, ...filterParams }).forEach(([key, value]) => {
+    //     if (value) params.append(key, value);
+    //   });
+    //   
+    //   // Add pagination
+    //   params.append('page', pagination.currentPage.toString());
+    //   params.append('perPage', pagination.perPage.toString());
+    //   
+    //   const response = await fetch(`${API_BASE_URL}/accommodations?${params.toString()}`);
+    //   
+    //   if (!response.ok) {
+    //     const errorData = await response.json().catch(() => ({}));
+    //     throw new Error(errorData.message || 'Failed to fetch accommodations');
+    //   }
+    //   
+    //   const result: ApiResponse = await response.json();
+    //   setAccommodations(result.data);
+    //   setPagination(result.pagination);
+    // } catch (err) {
+    //   setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    //   console.error('Error fetching accommodations:', err);
+    // } finally {
+    //   setLoading(false);
+    // }
+
+    // Mock data for accommodations
+    setLoading(true);
+    setError('');
+    
+    setTimeout(() => {
+      const mockAccommodations: Accommodation[] = [
+        {
+          id: 1,
+          name: 'Lake View Villa',
+          type: 'Villa',
+          description: 'Beautiful villa with stunning lake views',
+          price: '15000',
+          capacity: 6,
+          rooms: 3,
+          available: true,
+          features: ['Lake View', 'Private Pool', 'Garden'],
+          images: ['https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg'],
+          amenities: ['WiFi', 'AC', 'TV'],
+          location: { address: 'Lakeside Resort', coordinates: { latitude: null, longitude: null } },
+          ownerId: 1,
+          cityId: 1,
+          package: { name: 'Premium', description: 'Luxury package with all amenities', images: [], pricing: { adult: '5000', child: '2500', maxGuests: 6 } },
+          timestamps: { createdAt: '2025-01-01', updatedAt: '2025-01-01' }
+        }
+      ];
       
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      
-      // Add filters
-      Object.entries({ ...filters, ...filterParams }).forEach(([key, value]) => {
-        if (value) params.append(key, value);
+      setAccommodations(mockAccommodations);
+      setPagination({
+        total: mockAccommodations.length,
+        totalPages: 1,
+        currentPage: 1,
+        perPage: 10,
+        hasNextPage: false,
+        hasPrevPage: false
       });
-      
-      // Add pagination
-      params.append('page', pagination.currentPage.toString());
-      params.append('perPage', pagination.perPage.toString());
-      
-      const response = await fetch(`${API_BASE_URL}/accommodations?${params.toString()}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to fetch accommodations');
-      }
-      
-      const result: ApiResponse = await response.json();
-      setAccommodations(result.data);
-      setPagination(result.pagination);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      console.error('Error fetching accommodations:', err);
-    } finally {
       setLoading(false);
-    }
+    }, 1000);
   };
 
 
@@ -137,41 +176,52 @@ const handleDelete = async (id: number) => {
 
   if (!isConfirmed.isConfirmed) return;
 
-  try {
-    await axios.delete(`${API_BASE_URL}/accommodations/${id}`);
-    
-    setAccommodations((prev) => prev.filter((acc) => acc.id !== id));
-    
-    await Swal.fire('Deleted!', 'Your accommodation has been deleted.', 'success');
-  } catch (err) {
-    Swal.fire('Error!', 'Failed to delete accommodation.', 'error');
-    console.error('Error deleting accommodation:', err);
-  }
+  // Commented out API call - using mock deletion
+  // try {
+  //   await axios.delete(`${API_BASE_URL}/accommodations/${id}`);
+  //   
+  //   setAccommodations((prev) => prev.filter((acc) => acc.id !== id));
+  //   
+  //   await Swal.fire('Deleted!', 'Your accommodation has been deleted.', 'success');
+  // } catch (err) {
+  //   Swal.fire('Error!', 'Failed to delete accommodation.', 'error');
+  //   console.error('Error deleting accommodation:', err);
+  // }
+  
+  // Mock deletion
+  setAccommodations((prev) => prev.filter((acc) => acc.id !== id));
+  await Swal.fire('Deleted!', 'Your accommodation has been deleted.', 'success');
 };
 
 
   // Toggle availability
   const toggleAvailability = async (id: number, currentStatus: boolean) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/accommodations/${id}/toggle-availability`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ available: !currentStatus }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update availability');
-      }
-      
-      setAccommodations(prev => prev.map(acc => 
-        acc.id === id ? { ...acc, available: !currentStatus } : acc
-      ));
-    } catch (err) {
-      console.error('Error updating availability:', err);
-      Swal.fire('Error!', 'Failed to update availability.', 'error');
-    }
+    // Commented out API call - using mock toggle
+    // try {
+    //   const response = await fetch(`${API_BASE_URL}/accommodations/${id}/toggle-availability`, {
+    //     method: 'PATCH',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //     },
+    //     body: JSON.stringify({ available: !currentStatus }),
+    //   });
+    //   
+    //   if (!response.ok) {
+    //     throw new Error('Failed to update availability');
+    //   }
+    //   
+    //   setAccommodations(prev => prev.map(acc => 
+    //     acc.id === id ? { ...acc, available: !currentStatus } : acc
+    //   ));
+    // } catch (err) {
+    //   console.error('Error updating availability:', err);
+    //   Swal.fire('Error!', 'Failed to update availability.', 'error');
+    // }
+    
+    // Mock toggle
+    setAccommodations(prev => prev.map(acc => 
+      acc.id === id ? { ...acc, available: !currentStatus } : acc
+    ));
   };
 
   // Apply filters
