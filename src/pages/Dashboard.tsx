@@ -398,7 +398,7 @@ const Dashboard = () => {
           title="Total Bookings" 
           value={stats.totalBookings} 
           change={stats.bookingChange} 
-          icon={<Calendar className="h-6 w-6 text-blue-600" />} 
+          icon={<Calendar className="h-6 w-6 text-nature-600" />} 
           trend="up" 
           loading={loadingStates.stats}
         />
@@ -414,7 +414,7 @@ const Dashboard = () => {
           title="Revenue" 
           value={stats.revenue} 
           change={stats.revenueChange} 
-          icon={<DollarSign className="h-6 w-6 text-green-600" />} 
+          icon={<DollarSign className="h-6 w-6 text-nature-700" />} 
           trend="up" 
           loading={loadingStates.stats}
         />
@@ -422,7 +422,7 @@ const Dashboard = () => {
           title="Website Visitors" 
           value={stats.websiteVisitors} 
           change={stats.visitorsChange} 
-          icon={<Users className="h-6 w-6 text-indigo-600" />} 
+          icon={<Users className="h-6 w-6 text-nature-500" />} 
           trend="up" 
           loading={loadingStates.stats}
         />
@@ -433,14 +433,14 @@ const Dashboard = () => {
         <QuickAccessCard 
           title="Accommodations" 
           count={quickStats.accommodations} 
-          icon={<Building2 className="h-10 w-10 text-blue-600" />} 
+          icon={<Building2 className="h-10 w-10 text-nature-600" />} 
           link="/accommodations" 
           loading={loadingStates.quickStats}
         />
         <QuickAccessCard 
           title="Gallery" 
           count={quickStats.gallery} 
-          icon={<Image className="h-10 w-10 text-purple-600" />} 
+          icon={<Image className="h-10 w-10 text-nature-500" />} 
           link="/gallery" 
           loading={loadingStates.quickStats}
         />
@@ -454,7 +454,7 @@ const Dashboard = () => {
         <QuickAccessCard 
           title="Today's Bookings" 
           count={quickStats.todayBookings} 
-          icon={<Calendar className="h-10 w-10 text-green-600" />} 
+          icon={<Calendar className="h-10 w-10 text-nature-700" />} 
           link="/bookings" 
           loading={loadingStates.quickStats}
         />
@@ -482,7 +482,7 @@ const Dashboard = () => {
               <h3 className="text-lg font-medium leading-6 text-gray-900">Revenue Trend</h3>
               <p className="mt-1 text-sm text-gray-500">Last 7 days performance</p>
             </div>
-            <TrendingUp className="h-6 w-6 text-green-500" />
+            <TrendingUp className="h-6 w-6 text-nature-600" />
           </div>
         </div>
         <div className="p-4 h-64 flex items-center justify-center">

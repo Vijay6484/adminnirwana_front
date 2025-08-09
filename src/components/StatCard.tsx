@@ -25,7 +25,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, trend }
         ) : trend === 'down' ? (
           <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
         ) : null}
-        <span
+              isPositive ? 'text-nature-600' : 'text-red-600'
           className={`text-sm font-medium ${
             trend === 'up'
               ? 'text-green-600'

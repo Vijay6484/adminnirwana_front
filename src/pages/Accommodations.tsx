@@ -251,7 +251,7 @@ const handleDelete = async (id: number) => {
         <div className="mt-4 sm:mt-0">
           <button
             onClick={() => navigate('/accommodations/new')}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-nature-600 to-nature-700 hover:from-nature-700 hover:to-nature-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nature-500 transition-all duration-200"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Accommodation
@@ -270,7 +270,7 @@ const handleDelete = async (id: number) => {
             placeholder="Search accommodations..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-nature-500 focus:border-nature-500 sm:text-sm"
           />
           {searchTerm && (
             <button
@@ -284,7 +284,7 @@ const handleDelete = async (id: number) => {
         <button
           type="button"
           onClick={() => setFilterOpen(!filterOpen)}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nature-500"
         >
           <Filter className="h-4 w-4 mr-2" />
           Filter
@@ -301,7 +301,7 @@ const handleDelete = async (id: number) => {
               <select 
                 value={filters.type}
                 onChange={(e) => setFilters({...filters, type: e.target.value})}
-                className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-nature-500 focus:border-nature-500 sm:text-sm"
               >
                 {typeOptions.map(option => (
                   <option key={option.value} value={option.value}>
@@ -343,14 +343,14 @@ const handleDelete = async (id: number) => {
             <button
               type="button"
               onClick={resetFilters}
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nature-500"
             >
               Reset
             </button>
             <button
               type="button"
               onClick={applyFilters}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-nature-600 to-nature-700 hover:from-nature-700 hover:to-nature-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nature-500"
             >
               Apply
             </button>

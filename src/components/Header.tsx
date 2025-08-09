@@ -28,7 +28,9 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
               <Menu className="h-6 w-6" />
             </button>
             <h1 className="ml-2 md:ml-0 text-lg md:text-xl font-semibold text-gray-800">
-              Lakeview Resort Admin
+              <span className="bg-gradient-to-r from-nature-600 to-nature-700 bg-clip-text text-transparent">
+                Lakeview Resort Admin
+              </span>
             </h1>
           </div>
           
@@ -40,7 +42,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
               <span className="hidden md:block text-sm font-medium text-gray-700">
                 {user?.name || 'Admin User'}
               </span>
-              <div className="h-8 w-8 rounded-full bg-blue-700 flex items-center justify-center text-white">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-nature-500 to-nature-600 flex items-center justify-center text-white shadow-md">
                 <User className="h-5 w-5" />
               </div>
               <button

@@ -51,7 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, closeSidebar }) => {
 
       {/* Sidebar */}
       <div 
-        className={`fixed inset-y-0 left-0 z-30 w-64 transform bg-navy-900 text-white transition duration-300 ease-in-out md:relative md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-30 w-64 transform bg-gradient-to-b from-nature-800 to-nature-900 text-white transition duration-300 ease-in-out md:relative md:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -76,8 +76,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, closeSidebar }) => {
                 className={({ isActive }) =>
                   `group flex items-center rounded-md px-3 py-2 text-sm font-medium ${
                     isActive
-                      ? 'bg-navy-800 text-white'
-                      : 'text-navy-100 hover:bg-navy-800 hover:text-white'
+                      ? 'bg-nature-700 text-white shadow-lg'
+                      : 'text-nature-100 hover:bg-nature-700 hover:text-white'
                   }`
                 }
               >
@@ -88,8 +88,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, closeSidebar }) => {
           </nav>
 
           {/* Sidebar footer */}
-          <div className="border-t border-navy-800 p-4">
-            <button className="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium text-navy-100 hover:bg-navy-800 hover:text-white">
+          <div className="border-t border-nature-700 p-4">
+            <button className="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium text-nature-100 hover:bg-nature-700 hover:text-white">
               <LogOut className="mr-3 h-5 w-5" />
               Sign Out
             </button>
