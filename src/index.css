@@ -1,3 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { @apply box-border; }
+  html, body { @apply h-full m-0 p-0; }
+  html, body, #root { @apply w-full max-w-full overflow-x-hidden; }
+  html, body, #root { background: #0b0b0b; } /* your bg */
+}
