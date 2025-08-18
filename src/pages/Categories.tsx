@@ -1,23 +1,51 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Pencil, XCircle } from "lucide-react";
 
 type Category = {
   id: number;
-  name: string;
-  image: string;
-  status: "active" | "inactive";
+  name: string; // This will be the accommodation type (e.g., "Cottage")
+  image: string; // First image from the images array
+  status: "active" | "inactive"; // "active" if available, "inactive" if not
 };
 
-const initialCategories: Category[] = [
-  { id: 1, name: "Resort", image: "resort.jpg", status: "active" },
-  { id: 2, name: "Hotel", image: "hotel.jpg", status: "active" },
-  { id: 3, name: "Camping", image: "camping.jpg", status: "inactive" },
-  { id: 4, name: "Villa", image: "villa.jpg", status: "active" },
-];
-
 const Categories = () => {
-  const [categories, setCategories] = useState(initialCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [editCategory, setEditCategory] = useState<Category | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch(
+          "https://adminnirwana-back-1.onrender.com/admin/properties/accommodations"
+        );
+        const data = await response.json();
+        
+        // Transform API data into our category format
+        const transformedCategories = data.data.map((acc: any) => ({
+          id: acc.id,
+          name: acc.type, // Using the accommodation type as name
+          image: acc.images[0] || "https://via.placeholder.com/300",
+          status: acc.available ? "active" : "inactive"
+        }));
+        
+        setCategories(transformedCategories);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        // Fallback to default categories if API fails
+        setCategories([
+          { id: 1, name: "Resort", image: "resort.jpg", status: "active" },
+          { id: 2, name: "Hotel", image: "hotel.jpg", status: "active" },
+          { id: 3, name: "Camping", image: "camping.jpg", status: "inactive" },
+          { id: 4, name: "Villa", image: "villa.jpg", status: "active" },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleEditClick = (category: Category) => {
     setEditCategory(category);
@@ -29,6 +57,15 @@ const Categories = () => {
     );
     setEditCategory(null);
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 pb-16">
+        <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
+        <p className="text-sm text-gray-500">Loading categories...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-16">

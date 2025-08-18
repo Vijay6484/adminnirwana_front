@@ -98,7 +98,7 @@ const Bookings: React.FC = () => {
     totalPages: 1
   });
 
-  // const API_BASE_URL = 'https://a.plumeriaretreat.com/admin';
+  const API_BASE_URL = 'https://adminnirwana-back-1.onrender.com/admin';
 
   const mapApiBookingToBooking = (apiBooking: ApiBooking): Booking => {
     let paymentStatus: 'Paid' | 'Partial' | 'Unpaid' | 'Pending' = 'Pending';
@@ -154,76 +154,76 @@ const Bookings: React.FC = () => {
 
   const fetchBookings = async (filterParams: FilterOptions = {}) => {
     // Commented out API calls - using mock data
-    // try {
-    //   setLoading(true);
-    //   setError(null);
-    //   
-    //   const params = {
-    //     ...filterParams,
-    //     page: pagination.page,
-    //     limit: pagination.limit
-    //   };
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const params = {
+        ...filterParams,
+        page: pagination.page,
+        limit: pagination.limit
+      };
 
-    //   const response = await axios.get<ApiResponse>(`${API_BASE_URL}/bookings`, { params });
-    //   
-    //   if (response.data.success && Array.isArray(response.data.data)) {
-    //     const mappedBookings = response.data.data.map(mapApiBookingToBooking);
-    //     setBookings(mappedBookings);
-    //     setPagination(response.data.pagination);
-    //   } else {
-    //     console.warn('Unexpected API response structure', response.data);
-    //     setBookings([]);
-    //   }
-    // } catch (err) {
-    //   console.error('Error fetching bookings:', err);
-    //   setError(axios.isAxiosError(err) 
-    //     ? err.response?.data?.message || err.message 
-    //     : 'Failed to fetch bookings');
-    // } finally {
-    //   setLoading(false);
-    // }
+      const response = await axios.get<ApiResponse>(`${API_BASE_URL}/bookings`, { params });
+      
+      if (response.data.success && Array.isArray(response.data.data)) {
+        const mappedBookings = response.data.data.map(mapApiBookingToBooking);
+        setBookings(mappedBookings);
+        setPagination(response.data.pagination);
+      } else {
+        console.warn('Unexpected API response structure', response.data);
+        setBookings([]);
+      }
+    } catch (err) {
+      console.error('Error fetching bookings:', err);
+      setError(axios.isAxiosError(err) 
+        ? err.response?.data?.message || err.message 
+        : 'Failed to fetch bookings');
+    } finally {
+      setLoading(false);
+    }
     
     // Mock data for bookings
-    setLoading(true);
-    setError(null);
+    // setLoading(true);
+    // setError(null);
     
-    setTimeout(() => {
-      const mockBookings: Booking[] = [
-        {
-          id: 1,
-          bookingId: 'BK-0001',
-          guest: 'John Doe',
-          email: 'john@example.com',
-          phone: '+91 9876543210',
-          veg: 2,
-          nonVeg: 1,
-          jainCount: 0,
-          accommodation: 'Lake View Villa',
-          checkIn: '2025-01-20',
-          checkOut: '2025-01-22',
-          guests: 3,
-          adults: 2,
-          children: 1,
-          rooms: 1,
-          amount: '₹15,000',
-          paidAmount: '₹5,000',
-          remainingAmount: '₹10,000',
-          paymentStatus: 'Partial',
-          bookingStatus: 'Confirmed',
-          paymentTxnId: null,
-          createdAt: '2025-01-15'
-        }
-      ];
+    // setTimeout(() => {
+    //   const mockBookings: Booking[] = [
+    //     {
+    //       id: 1,
+    //       bookingId: 'BK-0001',
+    //       guest: 'John Doe',
+    //       email: 'john@example.com',
+    //       phone: '+91 9876543210',
+    //       veg: 2,
+    //       nonVeg: 1,
+    //       jainCount: 0,
+    //       accommodation: 'Lake View Villa',
+    //       checkIn: '2025-01-20',
+    //       checkOut: '2025-01-22',
+    //       guests: 3,
+    //       adults: 2,
+    //       children: 1,
+    //       rooms: 1,
+    //       amount: '₹15,000',
+    //       paidAmount: '₹5,000',
+    //       remainingAmount: '₹10,000',
+    //       paymentStatus: 'Partial',
+    //       bookingStatus: 'Confirmed',
+    //       paymentTxnId: null,
+    //       createdAt: '2025-01-15'
+    //     }
+    //   ];
       
-      setBookings(mockBookings);
-      setPagination({
-        total: mockBookings.length,
-        page: 1,
-        limit: 20,
-        totalPages: 1
-      });
-      setLoading(false);
-    }, 1000);
+    //   setBookings(mockBookings);
+    //   setPagination({
+    //     total: mockBookings.length,
+    //     page: 1,
+    //     limit: 20,
+    //     totalPages: 1
+    //   });
+    //   setLoading(false);
+    // }, 1000);
   };
 
   // Initial load
@@ -287,26 +287,26 @@ const Bookings: React.FC = () => {
 
   const exportToCSV = async () => {
     // Commented out API call - mock export
-    // try {
-    //   const response = await axios.get(`${API_BASE_URL}/bookings/export/csv`, {
-    //     responseType: 'blob'
-    //   });
-    //   
-    //   const url = window.URL.createObjectURL(new Blob([response.data]));
-    //   const link = document.createElement('a');
-    //   link.href = url;
-    //   link.download = 'bookings.csv';
-    //   document.body.appendChild(link);
-    //   link.click();
-    //   document.body.removeChild(link);
-    //   window.URL.revokeObjectURL(url);
-    // } catch (err) {
-    //   console.error('Error exporting bookings:', err);
-    //   alert('Failed to export bookings. Please try again.');
-    // }
+    try {
+      const response = await axios.get(`${API_BASE_URL}/bookings/export/csv`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'bookings.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error exporting bookings:', err);
+      alert('Failed to export bookings. Please try again.');
+    }
     
     // Mock export
-    alert('Export functionality is currently disabled (API removed)');
+    // alert('Export functionality is currently disabled (API removed)');
   };
 
   // Create a compatible booking object for the modal

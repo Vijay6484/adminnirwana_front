@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       // Commented out API authentication
-      // const response = await fetch('https://adminplumeria-back.onrender.com/admin/users');
+      // const response = await fetch('https://adminnirwana-back-1.onrender.com/admin/users');
       // const users = await response.json();
       // console.log('Fetched users:', users);
       // const matchedUser = users.find((u: any) => u.email === email);

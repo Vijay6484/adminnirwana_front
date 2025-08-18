@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Coffee, Save, Loader, AlertCircle, Upload } from 'lucide-react';
 
-const API_BASE_URL =  'https://adminplumeria-back.onrender.com/admin';
+const API_BASE_URL =  'https://adminnirwana-back-1.onrender.com/admin';
 
 const ServiceForm = () => {
   // Get ID from URL params (simulate useParams)

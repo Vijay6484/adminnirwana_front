@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ArrowLeft, Building2, Plus, X, Save, Trash2, Loader2, MapPin, Users, Package } from 'lucide-react';
 
-const admin_BASE_URL = 'https://a.plumeriaretreat.com';
+const admin_BASE_URL = 'https://adminnirwana-back-1.onrender.com';
 
 interface Accommodation {
   id?: number;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Coffee, Plus, Search, Filter, Edit, Trash2, Eye, XCircle, Loader, AlertCircle } from 'lucide-react';
 
-const API_BASE_URL = 'https://plumeriaadminback-production.up.railway.app/admin';
+const API_BASE_URL = 'https://adminnirwana-back-1.onrender.com/admin';
 
 const Services = () => {
   const [services, setServices] = useState<Service[]>([]);

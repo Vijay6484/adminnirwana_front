@@ -262,7 +262,7 @@ const Dashboard = () => {
     recentBookings: null as string | null
   });
 
-  // const admin_BASE_URL = 'https://a.plumeriaretreat.com/admin';
+  // const admin_BASE_URL = 'https://adminnirwana-back-1.onrender.com/admin';
   const RETRY_DELAY = 3000; // 3 seconds
   const MAX_RETRIES = 3;
   const REQUEST_TIMEOUT = 8000; // 8 seconds

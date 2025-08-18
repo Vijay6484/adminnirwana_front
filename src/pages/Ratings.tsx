@@ -16,7 +16,7 @@ const Ratings = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('https://adminplumeria-back.onrender.com/admin/ratings')
+    fetch('https://adminnirwana-back-1.onrender.com/admin/ratings')
       .then(res => res.json())
       .then(data => {
         setRatings(data);
@@ -27,7 +27,7 @@ const Ratings = () => {
 
   const handleDelete = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this rating?')) {
-      await fetch(`https://adminplumeria-back.onrender.com/admin/ratings/${id}`, { method: 'DELETE' });
+      await fetch(`https://adminnirwana-back-1.onrender.com/admin/ratings/${id}`, { method: 'DELETE' });
       setRatings(ratings.filter(rating => rating.id !== id));
     }
   };

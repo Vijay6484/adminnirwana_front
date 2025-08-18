@@ -48,7 +48,7 @@ const Gallery = () => {
     alt_text: '',
     description: ''
   });
-  // const API_BASE_URL = 'https://a.plumeriaretreat.com'; // Commented out API URL
+  const API_BASE_URL = 'https://adminnirwana-back-1.onrender.com'; // Commented out API URL
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
 
   const filters = [
@@ -62,72 +62,72 @@ const Gallery = () => {
   // Fetch gallery images from backend
   const fetchImages = async () => {
     // Commented out API call - using mock data
-    // try {
-    //   setLoading(true);
-    //   const params = new URLSearchParams();
-    //   if (activeFilter !== 'all') params.append('category', activeFilter);
-    //   if (searchTerm) params.append('search', searchTerm);
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (activeFilter !== 'all') params.append('category', activeFilter);
+      if (searchTerm) params.append('search', searchTerm);
 
-    //   const response = await fetch(`${API_BASE_URL}/admin/gallery?${params}`);
-    //   if (!response.ok) throw new Error('Failed to fetch images');
+      const response = await fetch(`${API_BASE_URL}/admin/gallery?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch images');
 
-    //   const data: GalleryApiResponse = await response.json();
-    //   setImages(data.images || []);
-    // } catch (err: any) {
-    //   setError('Failed to load gallery images');
-    //   console.error('Error fetching images:', err);
-    // } finally {
-    //   setLoading(false);
-    // }
+      const data: GalleryApiResponse = await response.json();
+      setImages(data.images || []);
+    } catch (err: any) {
+      setError('Failed to load gallery images');
+      console.error('Error fetching images:', err);
+    } finally {
+      setLoading(false);
+    }
     
     // Mock gallery data
-    setLoading(true);
-    setTimeout(() => {
-      const mockImages: GalleryImage[] = [
-        {
-          id: '1',
-          image_url: 'https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg',
-          title: 'Lake View Villa',
-          alt_text: 'Beautiful lake view villa',
-          description: 'Stunning villa with panoramic lake views',
-          category: 'accommodation'
-        },
-        {
-          id: '2',
-          image_url: 'https://images.pexels.com/photos/2666598/pexels-photo-2666598.jpeg',
-          title: 'Nature Trail',
-          alt_text: 'Scenic nature trail',
-          description: 'Beautiful hiking trail through the forest',
-          category: 'nature'
-        }
-      ];
-      setImages(mockImages);
-      setLoading(false);
-    }, 1000);
+    // setLoading(true);
+    // setTimeout(() => {
+    //   const mockImages: GalleryImage[] = [
+    //     {
+    //       id: '1',
+    //       image_url: 'https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg',
+    //       title: 'Lake View Villa',
+    //       alt_text: 'Beautiful lake view villa',
+    //       description: 'Stunning villa with panoramic lake views',
+    //       category: 'accommodation'
+    //     },
+    //     {
+    //       id: '2',
+    //       image_url: 'https://images.pexels.com/photos/2666598/pexels-photo-2666598.jpeg',
+    //       title: 'Nature Trail',
+    //       alt_text: 'Scenic nature trail',
+    //       description: 'Beautiful hiking trail through the forest',
+    //       category: 'nature'
+    //     }
+    //   ];
+    //   setImages(mockImages);
+    //   setLoading(false);
+    // }, 1000);
   };
 
   // Fetch gallery statistics
   const fetchStats = async () => {
     // Commented out API call - using mock stats
-    // try {
-    //   const response = await fetch(`${API_BASE_URL}/admin/gallery/stats`, {
-    //     method: 'GET',
-    //   });
-    //   if (!response.ok) throw new Error('Failed to fetch stats');
-    //   const data: GalleryStats = await response.json();
-    //   setStats(data);
-    // } catch (err) {
-    //   console.error('Error fetching stats:', err);
-    // }
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/gallery/stats`, {
+        method: 'GET',
+      });
+      if (!response.ok) throw new Error('Failed to fetch stats');
+      const data: GalleryStats = await response.json();
+      setStats(data);
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    }
     
     // Mock stats
-    setStats({
-      total: 2,
-      by_category: [
-        { category: 'accommodation', count: 1 },
-        { category: 'nature', count: 1 }
-      ]
-    });
+    // setStats({
+    //   total: 2,
+    //   by_category: [
+    //     { category: 'accommodation', count: 1 },
+    //     { category: 'nature', count: 1 }
+    //   ]
+    // });
   };
 
   // Upload images to backend
@@ -135,85 +135,63 @@ const Gallery = () => {
     if (!files || files.length === 0) return;
 
     // Commented out API upload - using mock upload
-    // try {
-    //   setUploading(true);
-    //   setError('');
+    try {
+      setUploading(true);
+      setError('');
 
-    //   const uploadedImages: { src: string; alt: string }[] = [];
+      const uploadedImages: { src: string; alt: string }[] = [];
 
-    //   for (const file of Array.from(files)) {
-    //     const formData = new FormData();
-    //     formData.append('image', file);
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('image', file);
 
-    //     const res = await fetch('https://plumeriaretreat.com/upload.php', {
-    //       method: 'POST',
-    //       body: formData,
-    //     });
-    //     const rawText = await res.text();
-    //     let data: any;
+        const res = await fetch('https://plumeriaretreat.com/upload.php', {
+          method: 'POST',
+          body: formData,
+        });
+        const rawText = await res.text();
+        let data: any;
 
-    //     try {
-    //       data = JSON.parse(rawText);
-    //     } catch (err) {
-    //       console.error('Non-JSON PHP response:', rawText);
-    //       throw new Error(`Server error: ${rawText || res.statusText}`);
-    //     }
+        try {
+          data = JSON.parse(rawText);
+        } catch (err) {
+          console.error('Non-JSON PHP response:', rawText);
+          throw new Error(`Server error: ${rawText || res.statusText}`);
+        }
 
-    //     if (data.success && data.filename) {
-    //       uploadedImages.push({
-    //         src: data.url,
-    //         alt: details.alt_text || file.name,
-    //       });
-    //     } else {
-    //       throw new Error(data.message || 'Upload failed on server');
-    //     }
-    //   }
+        if (data.success && data.filename) {
+          uploadedImages.push({
+            src: data.url,
+            alt: details.alt_text || file.name,
+          });
+        } else {
+          throw new Error(data.message || 'Upload failed on server');
+        }
+      }
 
-    //   const response = await fetch(`${API_BASE_URL}/admin/gallery/upload`, {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({
-    //       images: uploadedImages,
-    //       category: details.category,
-    //       title: details.title,
-    //       alt_text: details.alt_text,
-    //       description: details.description,
-    //     }),
-    //   });
+      const response = await fetch(`${API_BASE_URL}/admin/gallery/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          images: uploadedImages,
+          category: details.category,
+          title: details.title,
+          alt_text: details.alt_text,
+          description: details.description,
+        }),
+      });
 
-    //   if (!response.ok) {
-    //     const errorData = await response.json();
-    //     throw new Error(errorData.error || 'Image metadata save failed');
-    //   }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Image metadata save failed');
+      }
 
-    //   const savedData: { images: GalleryImage[] } = await response.json();
-    //   setSuccess(`${savedData.images.length} image(s) uploaded successfully`);
+      const savedData: { images: GalleryImage[] } = await response.json();
+      setSuccess(`${savedData.images.length} image(s) uploaded successfully`);
 
-    //   await fetchImages();
-    //   await fetchStats();
+      await fetchImages();
+      await fetchStats();
 
-    //   if (fileInputRef.current) fileInputRef.current.value = '';
-    //   setUploadDetails({
-    //     category: 'accommodation',
-    //     title: '',
-    //     alt_text: '',
-    //     description: ''
-    //   });
-
-    // } catch (err: any) {
-    //   setError(err.message || 'Image upload failed');
-    //   console.error('Upload error:', err);
-    // } finally {
-    //   setUploading(false);
-    // }
-    
-    // Mock upload
-    setUploading(true);
-    setTimeout(() => {
-      setSuccess(`${files.length} image(s) uploaded successfully`);
-      setUploading(false);
-      
-      // Reset form
       if (fileInputRef.current) fileInputRef.current.value = '';
       setUploadDetails({
         category: 'accommodation',
@@ -221,7 +199,29 @@ const Gallery = () => {
         alt_text: '',
         description: ''
       });
-    }, 2000);
+
+    } catch (err: any) {
+      setError(err.message || 'Image upload failed');
+      console.error('Upload error:', err);
+    } finally {
+      setUploading(false);
+    }
+    
+    // Mock upload
+    // setUploading(true);
+    // setTimeout(() => {
+    //   setSuccess(`${files.length} image(s) uploaded successfully`);
+    //   setUploading(false);
+      
+    //   // Reset form
+    //   if (fileInputRef.current) fileInputRef.current.value = '';
+    //   setUploadDetails({
+    //     category: 'accommodation',
+    //     title: '',
+    //     alt_text: '',
+    //     description: ''
+    //   });
+    // }, 2000);
   };
 
   // Handle modal upload
@@ -237,33 +237,33 @@ const Gallery = () => {
     if (!window.confirm('Are you sure you want to delete this image?')) return;
 
     // Commented out API delete - using mock delete
-    // try {
-    //   const response = await fetch(`${API_BASE_URL}/admin/gallery/${imageId}`, {
-    //     method: 'DELETE',
-    //   });
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/gallery/${imageId}`, {
+        method: 'DELETE',
+      });
 
-    //   if (!response.ok) {
-    //     let errorMsg = 'Delete failed';
-    //     try {
-    //       const errorData = await response.json();
-    //       errorMsg = errorData.error || errorMsg;
-    //     } catch {
-    //       errorMsg = response.statusText || errorMsg;
-    //     }
-    //     throw new Error(errorMsg);
-    //   }
+      if (!response.ok) {
+        let errorMsg = 'Delete failed';
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch {
+          errorMsg = response.statusText || errorMsg;
+        }
+        throw new Error(errorMsg);
+      }
 
-    //   setSuccess('Image deleted successfully');
-    //   setImages(prev => prev.filter(img => img.id !== imageId));
-    //   await fetchStats();
-    // } catch (err: any) {
-    //   setError(err.message || 'Failed to delete image');
-    //   console.error('Delete error:', err);
-    // }
+      setSuccess('Image deleted successfully');
+      setImages(prev => prev.filter(img => img.id !== imageId));
+      await fetchStats();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete image');
+      console.error('Delete error:', err);
+    }
     
     // Mock delete
-    setSuccess('Image deleted successfully');
-    setImages(prev => prev.filter(img => img.id !== imageId));
+    // setSuccess('Image deleted successfully');
+    // setImages(prev => prev.filter(img => img.id !== imageId));
   };
 
   // Clear messages after 3 seconds

@@ -21,7 +21,7 @@ const Locations = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const API_BASE_URL = 'https://a.plumeriaretreat.com/admin/cities';
+  const API_BASE_URL = 'https://adminnirwana-back-1.onrender.com/admin/cities';
 
   // Fetch locations from the server
   useEffect(() => {
