@@ -81,7 +81,7 @@ const Accommodations: React.FC = () => {
     hasPrevPage: false
   });
 
-  const API_BASE_URL = 'https://a.plumeriaretreat.com/admin/properties';
+  const API_BASE_URL = 'https://adminnirwana-back-1.onrender.com/admin/properties';
 
   // Fetch accommodations from backend
   useEffect(() => {
