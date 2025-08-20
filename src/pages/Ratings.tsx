@@ -1,35 +1,129 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Building2, User, Calendar, Trash2 } from 'lucide-react';
+import { Star, Building2, User, Calendar, Trash2, Plus, Upload, X, Save, Loader } from 'lucide-react';
 
 interface Rating {
   id: number;
-  propertyName: string;
   guestName: string;
+  guestPhoto: string;
   rating: number;
   review: string;
+  location: string;
   date: string;
-  image?: string;
+}
+
+interface NewRating {
+  guestName: string;
+  guestPhoto: string;
+  rating: number;
+  review: string;
+  location: string;
 }
 
 const Ratings = () => {
   const [ratings, setRatings] = useState<Rating[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [newRating, setNewRating] = useState<NewRating>({
+    guestName: '',
+    guestPhoto: '',
+    rating: 5,
+    review: '',
+    location: ''
+  });
 
+  // Mock data for ratings
   useEffect(() => {
-    fetch('https://adminnirwana-back-1.onrender.com/admin/ratings')
-      .then(res => res.json())
-      .then(data => {
-        setRatings(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    setLoading(true);
+    // Simulate API call with mock data
+    setTimeout(() => {
+      const mockRatings: Rating[] = [
+        {
+          id: 1,
+          guestName: 'Rahul Sharma',
+          guestPhoto: 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg',
+          rating: 5,
+          review: 'Amazing experience! The lake view villa was absolutely stunning and the service was exceptional. Would definitely recommend to anyone looking for a peaceful getaway.',
+          location: 'Mumbai, Maharashtra',
+          date: '2025-01-15'
+        },
+        {
+          id: 2,
+          guestName: 'Priya Patel',
+          guestPhoto: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg',
+          rating: 4,
+          review: 'Great location and beautiful surroundings. The accommodation was clean and comfortable. Only minor issue was the WiFi connectivity in some areas.',
+          location: 'Ahmedabad, Gujarat',
+          date: '2025-01-12'
+        },
+        {
+          id: 3,
+          guestName: 'Amit Singh',
+          guestPhoto: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg',
+          rating: 5,
+          review: 'Perfect place for a family vacation. Kids loved the activities and the staff was very helpful throughout our stay. Highly recommended!',
+          location: 'Delhi, India',
+          date: '2025-01-10'
+        },
+        {
+          id: 4,
+          guestName: 'Neha Gupta',
+          guestPhoto: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
+          rating: 4,
+          review: 'Beautiful resort with excellent amenities. The food was delicious and the nature walks were refreshing. Will visit again soon.',
+          location: 'Bangalore, Karnataka',
+          date: '2025-01-08'
+        }
+      ];
+      setRatings(mockRatings);
+      setLoading(false);
+    }, 1000);
   }, []);
 
   const handleDelete = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this rating?')) {
-      await fetch(`https://adminnirwana-back-1.onrender.com/admin/ratings/${id}`, { method: 'DELETE' });
       setRatings(ratings.filter(rating => rating.id !== id));
     }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    // Mock photo upload - in real app, this would upload to server
+    setTimeout(() => {
+      const mockPhotoUrl = URL.createObjectURL(file);
+      setNewRating(prev => ({
+        ...prev,
+        guestPhoto: mockPhotoUrl
+      }));
+      setUploading(false);
+    }, 1500);
+  };
+
+  const handleAddRating = () => {
+    if (!newRating.guestName || !newRating.review || !newRating.location) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    const rating: Rating = {
+      id: Date.now(),
+      ...newRating,
+      guestPhoto: newRating.guestPhoto || 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg', // Default dummy photo
+      date: new Date().toISOString().split('T')[0]
+    };
+
+    setRatings([rating, ...ratings]);
+    setNewRating({
+      guestName: '',
+      guestPhoto: '',
+      rating: 5,
+      review: '',
+      location: ''
+    });
+    setShowAddModal(false);
   };
 
   const renderStars = (rating: number) => {
@@ -43,6 +137,18 @@ const Ratings = () => {
     ));
   };
 
+  const renderRatingStars = (rating: number, onRatingChange?: (rating: number) => void) => {
+    return [...Array(5)].map((_, index) => (
+      <Star
+        key={index}
+        className={`h-6 w-6 cursor-pointer transition-colors ${
+          index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300 hover:text-yellow-200'
+        }`}
+        onClick={() => onRatingChange && onRatingChange(index + 1)}
+      />
+    ));
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -52,54 +158,115 @@ const Ratings = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6 pb-16 md:pb-0">
+      <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Ratings & Reviews</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Manage and monitor guest ratings and reviews
+            Manage and monitor guest ratings and reviews ({ratings.length} reviews)
           </p>
         </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-nature-600 hover:bg-nature-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nature-500"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Review
+        </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="min-w-full divide-y divide-gray-200">
-          {loading && (
-            <div className="text-center py-8 text-gray-500">Loading...</div>
-          )}
-          {!loading && ratings.map((rating) => (
-            <div key={rating.id} className="p-6 hover:bg-gray-50">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center mb-2">
-                    <Building2 className="h-5 w-5 text-gray-400 mr-2" />
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {rating.propertyName}
-                    </h3>
-                  </div>
-                  <div className="flex items-center mb-2">
-                    <div className="flex mr-4">
-                      {renderStars(rating.rating)}
-                    </div>
-                  </div>
-                  <p className="text-gray-600 mb-2">{rating.review}</p>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <User className="h-4 w-4 mr-1" />
-                    <span className="mr-4">{rating.guestName}</span>
-                    <Calendar className="h-4 w-4 mr-1" />
-                    <span>{formatDate(rating.date)}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDelete(rating.id)}
-                  className="text-red-600 hover:text-red-900"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* Ratings Table */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        {loading ? (
+          <div className="text-center py-12">
+            <Loader className="h-8 w-8 animate-spin text-nature-600 mx-auto" />
+            <p className="mt-2 text-gray-500">Loading reviews...</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Guest
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Rating
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Review
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {ratings.map((rating) => (
+                  <tr key={rating.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-12 w-12 flex-shrink-0">
+                          <img
+                            className="h-12 w-12 rounded-full object-cover"
+                            src={rating.guestPhoto}
+                            alt={rating.guestName}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg';
+                            }}
+                          />
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {rating.guestName}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex mr-2">
+                          {renderStars(rating.rating)}
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {rating.rating}/5
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 max-w-xs">
+                        <p className="line-clamp-3">{rating.review}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{rating.location}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">
+                        {formatDate(rating.date)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleDelete(rating.id)}
+                        className="text-red-600 hover:text-red-900 transition-colors"
+                        title="Delete Review"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {!loading && ratings.length === 0 && (
           <div className="text-center py-12">
@@ -108,9 +275,167 @@ const Ratings = () => {
             <p className="mt-1 text-sm text-gray-500">
               Ratings and reviews will appear here once guests start reviewing their stays.
             </p>
+            <div className="mt-6">
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-nature-600 hover:bg-nature-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add First Review
+              </button>
+            </div>
           </div>
         )}
       </div>
+
+      {/* Add Review Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-nature-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <Star className="h-6 w-6 text-nature-600" />
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      Add New Review
+                    </h3>
+                    <div className="mt-4 space-y-4">
+                      {/* Guest Name */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Guest Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={newRating.guestName}
+                          onChange={(e) => setNewRating({ ...newRating, guestName: e.target.value })}
+                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-nature-500 focus:border-nature-500 sm:text-sm"
+                          placeholder="Enter guest name"
+                        />
+                      </div>
+
+                      {/* Photo Upload */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Guest Photo
+                        </label>
+                        <div className="mt-1 flex items-center space-x-4">
+                          <div className="h-16 w-16 rounded-full overflow-hidden bg-gray-100">
+                            <img
+                              src={newRating.guestPhoto || 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg'}
+                              alt="Guest preview"
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handlePhotoUpload}
+                              className="hidden"
+                              id="photo-upload"
+                            />
+                            <label
+                              htmlFor="photo-upload"
+                              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nature-500 cursor-pointer"
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              {uploading ? 'Uploading...' : 'Upload Photo'}
+                            </label>
+                            {uploading && <Loader className="h-4 w-4 animate-spin text-nature-600 ml-2" />}
+                          </div>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Optional. If no photo is uploaded, a default photo will be used.
+                        </p>
+                      </div>
+
+                      {/* Rating */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Rating *
+                        </label>
+                        <div className="mt-1 flex items-center space-x-1">
+                          {renderRatingStars(newRating.rating, (rating) => 
+                            setNewRating({ ...newRating, rating })
+                          )}
+                          <span className="ml-2 text-sm text-gray-600">
+                            {newRating.rating}/5
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Location */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Location *
+                        </label>
+                        <input
+                          type="text"
+                          value={newRating.location}
+                          onChange={(e) => setNewRating({ ...newRating, location: e.target.value })}
+                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-nature-500 focus:border-nature-500 sm:text-sm"
+                          placeholder="e.g., Mumbai, Maharashtra"
+                        />
+                      </div>
+
+                      {/* Review */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Review *
+                        </label>
+                        <textarea
+                          rows={4}
+                          value={newRating.review}
+                          onChange={(e) => setNewRating({ ...newRating, review: e.target.value })}
+                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-nature-500 focus:border-nature-500 sm:text-sm"
+                          placeholder="Write the guest's review..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleAddRating}
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-nature-600 text-base font-medium text-white hover:bg-nature-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nature-500 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Add Review
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setNewRating({
+                      guestName: '',
+                      guestPhoto: '',
+                      rating: 5,
+                      review: '',
+                      location: ''
+                    });
+                  }}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nature-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
