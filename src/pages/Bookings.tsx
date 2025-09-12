@@ -98,7 +98,7 @@ const Bookings: React.FC = () => {
     totalPages: 1
   });
 
-  const API_BASE_URL = 'https://adminnirwana-back-1.onrender.com/admin';
+  const API_BASE_URL = 'https://api.nirwanastays.com/admin';
 
   const mapApiBookingToBooking = (apiBooking: ApiBooking): Booking => {
     let paymentStatus: 'Paid' | 'Partial' | 'Unpaid' | 'Pending' = 'Pending';

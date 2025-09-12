@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Star, Building2, User, Calendar, Trash2, Plus, Upload, X, Save, Loader } from 'lucide-react';
 
 interface Rating {
@@ -19,9 +20,42 @@ interface NewRating {
   location: string;
 }
 
+// Axios instance with base configuration
+const api = axios.create({
+  baseURL: 'https://api.nirwanastays.com',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor to add auth token if needed
+api.interceptors.request.use(
+  (config) => {
+    // You can add authentication tokens here if required
+    // const token = localStorage.getItem('authToken');
+    // if (token) {
+    //   config.headers.Authorization = `Bearer ${token}`;
+    // }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
+
 const Ratings = () => {
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [newRating, setNewRating] = useState<NewRating>({
@@ -32,57 +66,44 @@ const Ratings = () => {
     location: ''
   });
 
-  // Mock data for ratings
-  useEffect(() => {
+  // Fetch ratings from API
+  const fetchRatings = async () => {
     setLoading(true);
-    // Simulate API call with mock data
-    setTimeout(() => {
-      const mockRatings: Rating[] = [
-        {
-          id: 1,
-          guestName: 'Rahul Sharma',
-          guestPhoto: 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg',
-          rating: 5,
-          review: 'Amazing experience! The lake view villa was absolutely stunning and the service was exceptional. Would definitely recommend to anyone looking for a peaceful getaway.',
-          location: 'Mumbai, Maharashtra',
-          date: '2025-01-15'
-        },
-        {
-          id: 2,
-          guestName: 'Priya Patel',
-          guestPhoto: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg',
-          rating: 4,
-          review: 'Great location and beautiful surroundings. The accommodation was clean and comfortable. Only minor issue was the WiFi connectivity in some areas.',
-          location: 'Ahmedabad, Gujarat',
-          date: '2025-01-12'
-        },
-        {
-          id: 3,
-          guestName: 'Amit Singh',
-          guestPhoto: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg',
-          rating: 5,
-          review: 'Perfect place for a family vacation. Kids loved the activities and the staff was very helpful throughout our stay. Highly recommended!',
-          location: 'Delhi, India',
-          date: '2025-01-10'
-        },
-        {
-          id: 4,
-          guestName: 'Neha Gupta',
-          guestPhoto: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
-          rating: 4,
-          review: 'Beautiful resort with excellent amenities. The food was delicious and the nature walks were refreshing. Will visit again soon.',
-          location: 'Bangalore, Karnataka',
-          date: '2025-01-08'
-        }
-      ];
-      setRatings(mockRatings);
+    setError(null);
+    try {
+      const response = await api.get('/admin/ratings');
+      // Transform API data to match our interface
+      const transformedData: Rating[] = response.data.map((item: any) => ({
+        id: item.id,
+        guestName: item.guestName,
+        guestPhoto: item.image,
+        rating: item.rating,
+        review: item.review,
+        location: item.propertyName,
+        date: item.date
+      }));
+      setRatings(transformedData);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to fetch ratings');
+      console.error('Error fetching ratings:', err);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
+
+  useEffect(() => {
+    fetchRatings();
   }, []);
 
   const handleDelete = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this rating?')) {
-      setRatings(ratings.filter(rating => rating.id !== id));
+      try {
+        await api.delete(`/admin/ratings/${id}`);
+        setRatings(ratings.filter(rating => rating.id !== id));
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Failed to delete rating');
+        console.error('Error deleting rating:', err);
+      }
     }
   };
 
@@ -91,39 +112,80 @@ const Ratings = () => {
     if (!file) return;
 
     setUploading(true);
-    // Mock photo upload - in real app, this would upload to server
-    setTimeout(() => {
+    try {
+      // Create form data for file upload
+      const formData = new FormData();
+      formData.append('image', file);
+
+      // Upload image to server
+      const response = await api.post('/admin/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setNewRating(prev => ({
+        ...prev,
+        guestPhoto: response.data.imageUrl
+      }));
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to upload photo');
+      console.error('Error uploading photo:', err);
+      
+      // Fallback to mock URL if upload fails
       const mockPhotoUrl = URL.createObjectURL(file);
       setNewRating(prev => ({
         ...prev,
         guestPhoto: mockPhotoUrl
       }));
+    } finally {
       setUploading(false);
-    }, 1500);
+    }
   };
 
-  const handleAddRating = () => {
+  const handleAddRating = async () => {
     if (!newRating.guestName || !newRating.review || !newRating.location) {
       alert('Please fill in all required fields');
       return;
     }
 
-    const rating: Rating = {
-      id: Date.now(),
-      ...newRating,
-      guestPhoto: newRating.guestPhoto || 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg', // Default dummy photo
-      date: new Date().toISOString().split('T')[0]
-    };
+    try {
+      // Prepare data for API in the required format
+      const ratingData = {
+        guestName: newRating.guestName,
+        image: newRating.guestPhoto || 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg',
+        rating: newRating.rating,
+        review: newRating.review,
+        propertyName: newRating.location,
+        date: new Date().toISOString()
+      };
 
-    setRatings([rating, ...ratings]);
-    setNewRating({
-      guestName: '',
-      guestPhoto: '',
-      rating: 5,
-      review: '',
-      location: ''
-    });
-    setShowAddModal(false);
+      const response = await api.post('/admin/ratings', ratingData);
+      
+      // Add new rating to state
+      const newRatingWithId: Rating = {
+        id: response.data.id,
+        guestName: response.data.guestName,
+        guestPhoto: response.data.image,
+        rating: response.data.rating,
+        review: response.data.review,
+        location: response.data.propertyName,
+        date: response.data.date
+      };
+
+      setRatings([newRatingWithId, ...ratings]);
+      setNewRating({
+        guestName: '',
+        guestPhoto: '',
+        rating: 5,
+        review: '',
+        location: ''
+      });
+      setShowAddModal(false);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to add rating');
+      console.error('Error adding rating:', err);
+    }
   };
 
   const renderStars = (rating: number) => {
@@ -159,6 +221,19 @@ const Ratings = () => {
 
   return (
     <div className="space-y-6 pb-16 md:pb-0">
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+          <span className="block sm:inline">{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="absolute top-0 right-0 p-3"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Ratings & Reviews</h1>

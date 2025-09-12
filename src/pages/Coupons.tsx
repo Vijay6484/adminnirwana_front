@@ -39,7 +39,7 @@ interface Accommodation {
   id: number;
   name: string
 }
-const API_BASE_URL = 'https://adminnirwana-back-1.onrender.com/admin';
+const API_BASE_URL = 'https://api.nirwanastays.com/admin';
 
 const defaultCoupon: CouponFormData = {
   code: '',

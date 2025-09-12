@@ -37,7 +37,7 @@ interface BlockedDate {
   rooms_blocked: number;
 }
 
-const _BASE_URL = 'https://adminnirwana-back-1.onrender.com';
+const _BASE_URL = 'https://api.nirwanastays.com';
 
 const CreateBooking: React.FC = () => {
   const navigate = useNavigate();

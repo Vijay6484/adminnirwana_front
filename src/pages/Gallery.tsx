@@ -48,7 +48,7 @@ const Gallery = () => {
     alt_text: '',
     description: ''
   });
-  const API_BASE_URL = 'https://adminnirwana-back-1.onrender.com'; // Commented out API URL
+  const API_BASE_URL = 'https://api.nirwanastays.com'; // Commented out API URL
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
 
   const filters = [

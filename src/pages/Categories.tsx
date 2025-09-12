@@ -17,7 +17,7 @@ const Categories = () => {
     const fetchData = async () => {
       try {
         const response = await fetch(
-          "https://adminnirwana-back-1.onrender.com/admin/properties/accommodations"
+          "https://api.nirwanastays.com/admin/properties/accommodations"
         );
         const data = await response.json();
         

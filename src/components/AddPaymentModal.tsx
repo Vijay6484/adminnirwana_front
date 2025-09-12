@@ -24,7 +24,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
   booking, 
   onClose, 
   onPaymentAdded,
-  apiBaseUrl = 'https://adminnirwana-back-1.onrender.com/admin'
+  apiBaseUrl = 'https://api.nirwanastays.com/admin'
 }) => {
   const [paymentType, setPaymentType] = useState<'full' | 'partial'>('full');
   const [paymentMethod, setPaymentMethod] = useState('');

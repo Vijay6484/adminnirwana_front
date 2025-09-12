@@ -38,7 +38,7 @@ const UserForm: React.FC = () => {
   const fetchUser = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`https://adminnirwana-back-1.onrender.com/admin/users/${id}`);
+      const response = await fetch(`https://api.nirwanastays.com/admin/users/${id}`);
       if (!response.ok) throw new Error('User not found');
       const data = await response.json();
       setFormData({
@@ -82,8 +82,8 @@ const UserForm: React.FC = () => {
       }
 
       const url = isEditing
-        ? `https://adminnirwana-back-1.onrender.com/admin/users/${id}`
-        : 'https://adminnirwana-back-1.onrender.com/admin/users';
+        ? `https://api.nirwanastays.com/admin/users/${id}`
+        : 'https://api.nirwanastays.com/admin/users';
 
       const response = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',

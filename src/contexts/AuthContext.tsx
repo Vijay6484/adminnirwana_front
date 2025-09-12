@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 interface User {
   id: string;
   name: string;
+  phoneNumber: string;
   email: string;
   role: string;
 }
@@ -35,28 +36,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Commented out API authentication
-      // const response = await fetch('https://adminnirwana-back-1.onrender.com/admin/users');
-      // const users = await response.json();
-      // console.log('Fetched users:', users);
-      // const matchedUser = users.find((u: any) => u.email === email);
-      // if (!matchedUser) {
-      //   setIsLoading(false);
-      //   return false;
-      // }
+      const response = await fetch('https://api.nirwanastays.com/admin/users');
+      const users = await response.json();
+      console.log('Fetched users:', users);
+      const matchedUser = users.find((u: any) => (u.email === email.trim() || u.phoneNumber === email.trim()));
+      if (!matchedUser) {
+        setIsLoading(false);
+        return false;
+      }
+      console.log(matchedUser);
 
-      // const isPasswordMatch = await bcrypt.compare(password, matchedUser.password);
-      // if (!isPasswordMatch) {
-      //   setIsLoading(false);
-      //   return false;
-      // }
+      const isPasswordMatch = await bcrypt.compare(password, matchedUser.password);
+      if (!isPasswordMatch) {
+        setIsLoading(false);
+        return false;
+      }
 
-      // Mock authentication - accept any credentials
       const authUser: User = {
-        id: '1',
-        name: 'Admin User',
-        email: email,
-        role: 'admin',
+        id: matchedUser.id,
+        name: matchedUser.name,
+        phoneNumber: matchedUser.phoneNumber,
+        email: matchedUser.email,
+        role: matchedUser.role,
       };
 
       setUser(authUser);

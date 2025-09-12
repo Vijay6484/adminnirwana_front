@@ -27,6 +27,8 @@ import Success from './pages/Success';
 import Failure from './pages/Failure';
 
 function App() {
+  const user = JSON.parse(localStorage.getItem('authUser') || '{}');
+  console.log(localStorage.getItem('authUser'));
   return (
     <AuthProvider>
       <Router>
@@ -43,7 +45,10 @@ function App() {
               <Route path="services/:id" element={<ServiceForm />} />
               <Route path="bookings" element={<Bookings />} />
               <Route path="bookings/new" element={<CreateBooking />} />
-              <Route path="calendar" element={<Calendar />} />
+              <Route
+                path="calendar"
+                element={user?.role === 'manager' ? <Calendar /> : <NotFound />}
+              />
               <Route path="amenities" element={<Amenities />} />
               <Route path="cities" element={<Cities />} />
               <Route path="ratings" element={<Ratings />} />

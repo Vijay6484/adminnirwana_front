@@ -8,7 +8,7 @@ interface Amenity {
   active: boolean;
 }
 
-const API_BASE_URL = 'https://adminnirwana-back-1.onrender.com/admin/amenities';
+const API_BASE_URL = 'https://api.nirwanastays.com/admin/amenities';
 
 const Amenities = () => {
   const [amenities, setAmenities] = useState<Amenity[]>([]);
