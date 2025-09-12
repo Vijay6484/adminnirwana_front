@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Building2, Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -8,6 +9,8 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const { login, isLoading } = useAuth();
+  const navigate = useNavigate();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -17,9 +20,18 @@ const LoginPage: React.FC = () => {
       return;
     }
 
-    const success = await login(email, password);
-    if (!success) {
+    // login should return { success: boolean, role: string }
+    const result = await login(email, password);
+
+    if (!result.success) {
       setError('Invalid credentials. Please try again.');
+      return;
+    }
+
+    if (result.role === 'manager') {
+      navigate('/calendar'); // 🚀 go directly to calendar
+    } else {
+      navigate('/dashboard'); // default
     }
   };
 
@@ -51,6 +63,7 @@ const LoginPage: React.FC = () => {
               </div>
             )}
 
+            {/* Email input */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email address
@@ -73,6 +86,7 @@ const LoginPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Password input */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
@@ -106,6 +120,7 @@ const LoginPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Remember me */}
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
@@ -118,7 +133,6 @@ const LoginPage: React.FC = () => {
                   Remember me
                 </label>
               </div>
-
               <div className="text-sm">
                 <a href="#" className="font-medium text-nature-600 hover:text-nature-500">
                   Forgot your password?
@@ -126,6 +140,7 @@ const LoginPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Submit */}
             <div>
               <button
                 type="submit"
@@ -143,32 +158,10 @@ const LoginPage: React.FC = () => {
               </button>
             </div>
           </form>
-
-          {/* <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Demo Credentials</span>
-              </div>
-            </div>
-
-            <div className="mt-4 bg-gray-50 rounded-md p-4">
-              <p className="text-xs text-gray-600 text-center">
-                For demo purposes, you can use any email and password to login.
-              </p>
-              <div className="mt-2 text-xs text-gray-500 text-center">
-                <strong>Example:</strong> admin@resort.com / password123
-              </div>
-            </div>
-          </div> */}
         </div>
 
         <div className="text-center">
-          <p className="text-xs text-gray-500">
-            © 2025 Resort Admin Panel. All rights reserved.
-          </p>
+          <p className="text-xs text-gray-500">© 2025 Resort Admin Panel. All rights reserved.</p>
         </div>
       </div>
     </div>
