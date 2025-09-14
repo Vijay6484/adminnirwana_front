@@ -31,7 +31,7 @@ const LoginPage: React.FC = () => {
     if (result.role === 'manager') {
       navigate('/calendar'); // 🚀 go directly to calendar
     } else {
-      navigate('/dashboard'); // default
+      navigate('/'); // default
     }
   };
 

@@ -47,7 +47,7 @@ function App() {
               <Route path="bookings/new" element={<CreateBooking />} />
               <Route
                 path="calendar"
-                element={user?.role === 'manager' ? <Calendar /> : <NotFound />}
+                element={<Calendar /> }
               />
               <Route path="amenities" element={<Amenities />} />
               <Route path="cities" element={<Cities />} />

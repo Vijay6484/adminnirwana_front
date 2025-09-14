@@ -41,35 +41,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<LoginResult> => {
     setIsLoading(true);
     try {
-      // ✅ Check localStorage first (cache users)
       let users: any[] = [];
-      const cachedUsers = localStorage.getItem('allUsers');
 
-      if (cachedUsers) {
-        users = JSON.parse(cachedUsers);
-      } else {
-        const response = await fetch('https://api.nirwanastays.com/admin/users');
+      // Always try fresh API call
+      const response = await fetch('https://api.nirwanastays.com/admin/users');
+      if (response.ok) {
         users = await response.json();
-        localStorage.setItem('allUsers', JSON.stringify(users));
       }
 
-      console.log('Fetched users:', users);
+      // ❌ No users from API → reject login immediately
+      if (!users || users.length === 0) {
+        setIsLoading(false);
+        return { success: false };
+      }
 
+      // Match by email or phone
       const matchedUser = users.find(
         (u: any) => u.email === email.trim() || u.phoneNumber === email.trim()
       );
-
+      console.log('Matched user:', matchedUser);
       if (!matchedUser) {
         setIsLoading(false);
         return { success: false };
       }
 
+      // Check password
       const isPasswordMatch = await bcrypt.compare(password, matchedUser.password);
+      console.log('Password match:', isPasswordMatch);
       if (!isPasswordMatch) {
         setIsLoading(false);
         return { success: false };
       }
 
+      // ✅ Store only this matched user
       const authUser: User = {
         id: matchedUser.id,
         name: matchedUser.name,
@@ -79,9 +83,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       setUser(authUser);
-      localStorage.setItem('authUser', JSON.stringify(authUser)); // persist login
-      setIsLoading(false);
+      localStorage.setItem('authUser', JSON.stringify(authUser));
 
+      setIsLoading(false);
       return { success: true, role: matchedUser.role };
     } catch (err) {
       console.error('Login error:', err);
