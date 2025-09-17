@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, Music, UtensilsCrossed, Flame, Coffee, Plus, Trash2, Edit } from 'lucide-react';
+import { Wifi, Music, UtensilsCrossed, Flame, Coffee, Plus, Trash2, Edit, Snowflake, ThermometerSun, ParkingCircle, TreePine, Flower2, CupSoda, Waves } from 'lucide-react';
 
 interface Amenity {
   id: number;
@@ -68,13 +68,29 @@ const Amenities = () => {
     //   case 'u':
     //     return <Water className="h-5 w-5" />;
       case 'music':
-        return <Music className="h-5 w-5" />;
-      case 'utensils':
-        return <UtensilsCrossed className="h-5 w-5" />;
-      case 'flame':
-        return <Flame className="h-5 w-5" />;
+        return <Music className="h-5 w-5" />;  
+      case 'pool':
+        return <Waves className="h-5 w-5" />;
       case 'coffee':
         return <Coffee className="h-5 w-5" />;
+      case 'electric_kettle':
+        return <ThermometerSun className="h-5 w-5" />;
+      case 'ac':
+        return <Snowflake className="h-5 w-5" />;
+      case 'restaurant':
+        return <UtensilsCrossed className="h-5 w-5" />;
+      case 'parking':
+        return <ParkingCircle className="h-5 w-5" />;
+      case 'mini_fridge':
+        return <CupSoda className="h-5 w-5" />;
+      case 'spa':
+        return <Flower2 className="h-5 w-5" />;
+      case 'garden':
+        return <TreePine className="h-5 w-5" />;
+      case 'barbeque':
+        return <Flame className="h-5 w-5" />;
+      case 'heater':
+        return <ThermometerSun className="h-5 w-5" />;
       default:
         return <Wifi className="h-5 w-5" />;
     }
@@ -183,8 +199,17 @@ const Amenities = () => {
                       <option value="pool">Swimming Pool</option>
                       <option value="music">Music System</option>
                       <option value="utensils">Dinner</option>
+                      <option value="restaurant">Restaurant</option>
                       <option value="flame">Bonfire</option>
                       <option value="coffee">BBQ</option>
+                      <option value="electric_kettle">Electric Kettle</option>
+                      <option value="ac">AC</option>
+                      <option value="barbeque">Barbeque</option>
+                      <option value="heater">Heater</option>
+                      <option value="parking">Parking</option>
+                      <option value="mini_fridge">Mini Fridge</option>
+                      <option value="spa">Spa & Wellness</option>
+                      <option value="garden">Garden</option>
                     </select>
                   </div>
                 </div>
@@ -241,8 +266,17 @@ const Amenities = () => {
                       <option value="pool">Swimming Pool</option>
                       <option value="music">Music System</option>
                       <option value="utensils">Dinner</option>
+                      <option value="restaurant">Restaurant</option>
                       <option value="flame">Bonfire</option>
                       <option value="coffee">BBQ</option>
+                      <option value="electric_kettle">Electric Kettle</option>
+                      <option value="ac">AC</option>
+                      <option value="barbeque">Barbeque</option>
+                      <option value="heater">Heater</option>
+                      <option value="parking">Parking</option>
+                      <option value="mini_fridge">Mini Fridge</option>
+                      <option value="spa">Spa & Wellness</option>
+                      <option value="garden">Garden</option>
                     </select>
                   </div>
                   <div>
