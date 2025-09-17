@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -891,15 +893,15 @@ const AccommodationForm: React.FC = () => {
                   Package Description
                 </label>
                 <div className="mt-1">
-                  <textarea
-                    id="packageDescription"
-                    name="packageDescription"
-                    rows={3}
+                  <ReactQuill
+                    theme="snow"
                     value={formData.packageDescription}
-                    onChange={handleChange}
-                    className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.packageDescription ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                    placeholder="Describe what's included in this package"
+                    onChange={(value) => {
+                      setFormData({ ...formData, packageDescription: value });
+                      if (errors.packageDescription) {
+                        setErrors({ ...errors, packageDescription: '' });
+                      }
+                    }}
                   />
                   {errors.packageDescription && <p className="mt-1 text-sm text-red-600">{errors.packageDescription}</p>}
                 </div>
