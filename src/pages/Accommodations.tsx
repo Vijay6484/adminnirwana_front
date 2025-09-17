@@ -1,8 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Building2, Plus, Search, Filter, Edit, Trash2, Eye, XCircle, Loader } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import Swal from 'sweetalert2';
-import axios from 'axios';
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Building2,
+  Plus,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  Eye,
+  XCircle,
+  Loader,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+import axios from "axios";
+import DOMPurify from "dompurify";
 interface Accommodation {
   id: number;
   name: string;
@@ -62,15 +73,15 @@ interface Filters {
 
 const Accommodations: React.FC = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [accommodations, setAccommodations] = useState<Accommodation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [filters, setFilters] = useState<Filters>({
-    type: '',
-    capacity: '',
-    availability: ''
+    type: "",
+    capacity: "",
+    availability: "",
   });
   const [pagination, setPagination] = useState<Pagination>({
     total: 0,
@@ -78,10 +89,32 @@ const Accommodations: React.FC = () => {
     currentPage: 1,
     perPage: 10,
     hasNextPage: false,
-    hasPrevPage: false
+    hasPrevPage: false,
   });
 
-  const API_BASE_URL = 'https://api.nirwanastays.com/admin/properties';
+  const sanitizeConfig = {
+    ALLOWED_TAGS: [
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+      "strong",
+      "em",
+      "u",
+      "s",
+      "p",
+      "br",
+      "ul",
+      "ol",
+      "li",
+      "a",
+    ],
+    ALLOWED_ATTR: ["href", "target", "rel"],
+  };
+
+  const API_BASE_URL = "https://api.nirwanastays.com/admin/properties";
 
   // Fetch accommodations from backend
   useEffect(() => {
@@ -92,33 +125,39 @@ const Accommodations: React.FC = () => {
     // Commented out API calls - using mock data instead
     try {
       setLoading(true);
-      setError('');
+      setError("");
 
       const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
+      if (searchTerm) params.append("search", searchTerm);
 
       // Add filters
-      Object.entries({ ...filters, ...filterParams }).forEach(([key, value]) => {
-        if (value) params.append(key, value);
-      });
+      Object.entries({ ...filters, ...filterParams }).forEach(
+        ([key, value]) => {
+          if (value) params.append(key, value);
+        }
+      );
 
       // Add pagination
-      params.append('page', pagination.currentPage.toString());
-      params.append('perPage', pagination.perPage.toString());
+      params.append("page", pagination.currentPage.toString());
+      params.append("perPage", pagination.perPage.toString());
 
-      const response = await fetch(`${API_BASE_URL}/accommodations?${params.toString()}`);
+      const response = await fetch(
+        `${API_BASE_URL}/accommodations?${params.toString()}`
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to fetch accommodations');
+        throw new Error(errorData.message || "Failed to fetch accommodations");
       }
 
       const result: ApiResponse = await response.json();
       setAccommodations(result.data);
       setPagination(result.pagination);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      console.error('Error fetching accommodations:', err);
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+      console.error("Error fetching accommodations:", err);
     } finally {
       setLoading(false);
     }
@@ -162,16 +201,15 @@ const Accommodations: React.FC = () => {
     // }, 1000);
   };
 
-
   const handleDelete = async (id: number) => {
     const isConfirmed = await Swal.fire({
-      title: 'Are you sure?',
+      title: "Are you sure?",
       text: "You won't be able to revert this!",
-      icon: 'warning',
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!',
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
     });
 
     if (!isConfirmed.isConfirmed) return;
@@ -182,10 +220,14 @@ const Accommodations: React.FC = () => {
 
       setAccommodations((prev) => prev.filter((acc) => acc.id !== id));
 
-      await Swal.fire('Deleted!', 'Your accommodation has been deleted.', 'success');
+      await Swal.fire(
+        "Deleted!",
+        "Your accommodation has been deleted.",
+        "success"
+      );
     } catch (err) {
-      Swal.fire('Error!', 'Failed to delete accommodation.', 'error');
-      console.error('Error deleting accommodation:', err);
+      Swal.fire("Error!", "Failed to delete accommodation.", "error");
+      console.error("Error deleting accommodation:", err);
     }
 
     // Mock deletion
@@ -193,93 +235,107 @@ const Accommodations: React.FC = () => {
     // await Swal.fire('Deleted!', 'Your accommodation has been deleted.', 'success');
   };
 
-
   // Toggle availability
   const toggleAvailability = async (id: number, currentStatus: boolean) => {
     // Commented out API call - using mock toggle
     try {
-      const response = await fetch(`${API_BASE_URL}/accommodations/${id}/toggle-availability`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ available: !currentStatus }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/accommodations/${id}/toggle-availability`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ available: !currentStatus }),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to update availability');
+        throw new Error("Failed to update availability");
       }
 
-      setAccommodations(prev => prev.map(acc =>
-        acc.id === id ? { ...acc, available: !currentStatus } : acc
-      ));
+      setAccommodations((prev) =>
+        prev.map((acc) =>
+          acc.id === id ? { ...acc, available: !currentStatus } : acc
+        )
+      );
     } catch (err) {
-      console.error('Error updating availability:', err);
-      Swal.fire('Error!', 'Failed to update availability.', 'error');
+      console.error("Error updating availability:", err);
+      Swal.fire("Error!", "Failed to update availability.", "error");
     }
 
     // // Mock toggle
-    // setAccommodations(prev => prev.map(acc => 
+    // setAccommodations(prev => prev.map(acc =>
     //   acc.id === id ? { ...acc, available: !currentStatus } : acc
     // ));
   };
 
   // Apply filters
   const applyFilters = () => {
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
     fetchAccommodations(filters);
     setFilterOpen(false);
   };
 
   const resetFilters = () => {
     setFilters({
-      type: '',
-      capacity: '',
-      availability: ''
+      type: "",
+      capacity: "",
+      availability: "",
     });
-    setSearchTerm('');
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    setSearchTerm("");
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
   // Format price for display
   const formatPrice = (price: string) => {
     const num = parseFloat(price);
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 2,
     }).format(num);
   };
 
   // Handle image loading errors
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const target = e.target as HTMLImageElement;
-    target.src = 'https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg';
+    target.src =
+      "https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg";
     target.onerror = null; // Prevent infinite loop
   };
 
   // Memoized filter options
-  const typeOptions = useMemo(() => [
-    { value: '', label: 'All Types' },
-    { value: 'Suite', label: 'Suite' },
-    { value: 'Villa', label: 'Villa' },
-    { value: 'Cottage', label: 'Cottage' },
-    { value: 'Bungalow', label: 'Bungalow' },
-    { value: 'Glamping', label: 'Glamping' }
-  ], []);
+  const typeOptions = useMemo(
+    () => [
+      { value: "", label: "All Types" },
+      { value: "Suite", label: "Suite" },
+      { value: "Villa", label: "Villa" },
+      { value: "Cottage", label: "Cottage" },
+      { value: "Bungalow", label: "Bungalow" },
+      { value: "Glamping", label: "Glamping" },
+    ],
+    []
+  );
 
-  const capacityOptions = useMemo(() => [
-    { value: '', label: 'Any Capacity' },
-    { value: '1-2', label: '1-2 People' },
-    { value: '3-4', label: '3-4 People' },
-    { value: '5+', label: '5+ People' }
-  ], []);
+  const capacityOptions = useMemo(
+    () => [
+      { value: "", label: "Any Capacity" },
+      { value: "1-2", label: "1-2 People" },
+      { value: "3-4", label: "3-4 People" },
+      { value: "5+", label: "5+ People" },
+    ],
+    []
+  );
 
-  const availabilityOptions = useMemo(() => [
-    { value: '', label: 'All' },
-    { value: 'available', label: 'Available' },
-    { value: 'unavailable', label: 'Unavailable' }
-  ], []);
+  const availabilityOptions = useMemo(
+    () => [
+      { value: "", label: "All" },
+      { value: "available", label: "Available" },
+      { value: "unavailable", label: "Unavailable" },
+    ],
+    []
+  );
 
   // Loading state
   if (loading) {
@@ -290,17 +346,25 @@ const Accommodations: React.FC = () => {
       </div>
     );
   }
-
+  const text = `
+  <h2>This is a heading</h2>
+  <p>This is a paragraph with <strong>bold text</strong>.</p>
+  <ul><li>First bullet</li><li>Second bullet</li></ul>
+  `;
+  console.log("Sanitized HTML:", DOMPurify.sanitize(text, sanitizeConfig));
+  console.log("Raw HTML:", text);
   return (
     <div className="space-y-6 pb-16 md:pb-0">
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Accommodations</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage your resort's accommodations</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Manage your resort's accommodations
+          </p>
         </div>
         <div className="mt-4 sm:mt-0">
           <button
-            onClick={() => navigate('/accommodations/new')}
+            onClick={() => navigate("/accommodations/new")}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-nature-600 to-nature-700 hover:from-nature-700 hover:to-nature-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nature-500 transition-all duration-200"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -324,7 +388,7 @@ const Accommodations: React.FC = () => {
           />
           {searchTerm && (
             <button
-              onClick={() => setSearchTerm('')}
+              onClick={() => setSearchTerm("")}
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
             >
               <XCircle className="h-5 w-5 text-gray-400 hover:text-gray-500" />
@@ -347,13 +411,17 @@ const Accommodations: React.FC = () => {
           <h3 className="font-medium text-gray-700">Filter Options</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Type
+              </label>
               <select
                 value={filters.type}
-                onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+                onChange={(e) =>
+                  setFilters({ ...filters, type: e.target.value })
+                }
                 className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-nature-500 focus:border-nature-500 sm:text-sm"
               >
-                {typeOptions.map(option => (
+                {typeOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -361,13 +429,17 @@ const Accommodations: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Capacity
+              </label>
               <select
                 value={filters.capacity}
-                onChange={(e) => setFilters({ ...filters, capacity: e.target.value })}
+                onChange={(e) =>
+                  setFilters({ ...filters, capacity: e.target.value })
+                }
                 className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               >
-                {capacityOptions.map(option => (
+                {capacityOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -375,13 +447,17 @@ const Accommodations: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Availability
+              </label>
               <select
                 value={filters.availability}
-                onChange={(e) => setFilters({ ...filters, availability: e.target.value })}
+                onChange={(e) =>
+                  setFilters({ ...filters, availability: e.target.value })
+                }
                 className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               >
-                {availabilityOptions.map(option => (
+                {availabilityOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -419,58 +495,89 @@ const Accommodations: React.FC = () => {
       {!error && (
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {accommodations.map((accommodation) => (
-            <div key={accommodation.id} className="bg-white rounded-lg shadow overflow-hidden flex flex-col h-full">
+            <div
+              key={accommodation.id}
+              className="bg-white rounded-lg shadow overflow-hidden flex flex-col h-full"
+            >
               <div className="relative h-48 flex-shrink-0">
                 <img
-                  src={accommodation.images[0] || 'https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg'}
+                  src={
+                    accommodation.images[0] ||
+                    "https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg"
+                  }
                   alt={accommodation.name}
                   className="w-full h-full object-cover"
                   onError={handleImageError}
                 />
                 <div className="absolute top-2 right-2">
                   <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-colors ${accommodation.available
-                        ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                        : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      }`}
-                    onClick={() => toggleAvailability(accommodation.id, accommodation.available)}
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                      accommodation.available
+                        ? "bg-green-100 text-green-800 hover:bg-green-200"
+                        : "bg-red-100 text-red-800 hover:bg-red-200"
+                    }`}
+                    onClick={() =>
+                      toggleAvailability(
+                        accommodation.id,
+                        accommodation.available
+                      )
+                    }
                   >
-                    {accommodation.available ? 'Available' : 'Unavailable'}
+                    {accommodation.available ? "Available" : "Unavailable"}
                   </span>
                 </div>
               </div>
               <div className="p-4 flex flex-col flex-grow">
                 <div className="flex items-center mb-2">
                   <Building2 className="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" />
-                  <h3 className="text-lg font-medium text-gray-900 truncate">{accommodation.name}</h3>
+                  <h3 className="text-lg font-medium text-gray-900 truncate">
+                    {accommodation.name}
+                  </h3>
                 </div>
                 <p className="text-sm text-gray-500">{accommodation.type}</p>
 
                 {accommodation.description && (
-                  <p className="text-sm text-gray-600 mt-2 line-clamp-2">{accommodation.description}</p>
+                  <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                    {accommodation.description}
+                  </p>
                 )}
                 <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="font-medium">Capacity:</span> {accommodation.capacity}
+                    <span className="font-medium">Capacity:</span>{" "}
+                    {accommodation.capacity}
                   </div>
                   <div>
-                    <span className="font-medium">Rooms:</span> {accommodation.rooms}
+                    <span className="font-medium">Rooms:</span>{" "}
+                    {accommodation.rooms}
                   </div>
                   <div>
-                    <span className="font-medium">Price:</span> {formatPrice(accommodation.price)}
+                    <span className="font-medium">Price:</span>{" "}
+                    {formatPrice(accommodation.price)}
                   </div>
                   <div>
-                    <span className="font-medium">Location:</span> {accommodation.location.address}
+                    <span className="font-medium">Location:</span>{" "}
+                    {accommodation.location.address}
                   </div>
                 </div>
                 {accommodation.package.description && (
                   <div className="mt-2 text-sm text-gray-600">
-                    <span className="font-medium">Package:</span> {accommodation.package.description}
+                    <span className="font-medium">Package:</span>
+                    <article
+                      className=" prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{
+                        __html: DOMPurify.sanitize(
+                          accommodation.package.description,
+                          sanitizeConfig
+                        ),
+                      }}
+                    />
                   </div>
                 )}
                 <div className="mt-auto pt-4 flex space-x-2">
                   <button
-                    onClick={() => navigate(`/accommodations/${accommodation.id}`)}
+                    onClick={() =>
+                      navigate(`/accommodations/${accommodation.id}`)
+                    }
                     className="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                   >
                     <Edit className="h-4 w-4 mr-1" />
@@ -483,7 +590,9 @@ const Accommodations: React.FC = () => {
                     <Trash2 className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => navigate(`/accommodations/${accommodation.id}/view`)}
+                    onClick={() =>
+                      navigate(`/accommodations/${accommodation.id}/view`)
+                    }
                     className="inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                   >
                     <Eye className="h-4 w-4" />
@@ -499,17 +608,27 @@ const Accommodations: React.FC = () => {
       {pagination.total > 0 && (
         <div className="flex items-center justify-between mt-6">
           <div className="text-sm text-gray-500">
-            Showing <span className="font-medium">{(pagination.currentPage - 1) * pagination.perPage + 1}</span> to{' '}
+            Showing{" "}
             <span className="font-medium">
-              {Math.min(pagination.currentPage * pagination.perPage, pagination.total)}
-            </span>{' '}
+              {(pagination.currentPage - 1) * pagination.perPage + 1}
+            </span>{" "}
+            to{" "}
+            <span className="font-medium">
+              {Math.min(
+                pagination.currentPage * pagination.perPage,
+                pagination.total
+              )}
+            </span>{" "}
             of <span className="font-medium">{pagination.total}</span> results
           </div>
           <div className="flex space-x-2">
             <button
               onClick={() => {
                 if (pagination.hasPrevPage) {
-                  setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }));
+                  setPagination((prev) => ({
+                    ...prev,
+                    currentPage: prev.currentPage - 1,
+                  }));
                 }
               }}
               disabled={!pagination.hasPrevPage}
@@ -520,7 +639,10 @@ const Accommodations: React.FC = () => {
             <button
               onClick={() => {
                 if (pagination.hasNextPage) {
-                  setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }));
+                  setPagination((prev) => ({
+                    ...prev,
+                    currentPage: prev.currentPage + 1,
+                  }));
                 }
               }}
               disabled={!pagination.hasNextPage}
@@ -536,12 +658,16 @@ const Accommodations: React.FC = () => {
       {!loading && !error && accommodations.length === 0 && (
         <div className="text-center py-10">
           <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No accommodations found</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            No accommodations found
+          </h3>
           <p className="mt-1 text-sm text-gray-500">
-            {searchTerm || filters.type || filters.capacity || filters.availability
-              ? 'Try adjusting your search or filter criteria.'
-              : 'Get started by adding your first accommodation.'
-            }
+            {searchTerm ||
+            filters.type ||
+            filters.capacity ||
+            filters.availability
+              ? "Try adjusting your search or filter criteria."
+              : "Get started by adding your first accommodation."}
           </p>
         </div>
       )}
