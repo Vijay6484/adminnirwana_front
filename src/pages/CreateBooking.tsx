@@ -379,6 +379,7 @@ const CreateBooking: React.FC = () => {
     totalPerson: number,
     adult: number,
     child: number,
+    rooms: number,
     vegCount: number,
     nonvegCount: number,
     joinCount: number,
@@ -859,7 +860,7 @@ const CreateBooking: React.FC = () => {
 
                             style="font-size:0pt; line-height:0pt; text-align:right;background:#ffffff;padding-right: 6px;">
 
-                            <img src="https://plumeriaretreat.com/assets/plumeria-removebg-preview-CWtMayYt.png" width="auto"
+                            <img src="https://nirwanastays.com/logo-dark.png" width="auto"
 
                               height="55" mc:edit="image_2" style="max-height:55px;" border="0" alt="Logo" />
 
@@ -1007,9 +1008,7 @@ const CreateBooking: React.FC = () => {
 
                                         style="color:#000000; font-family:Lato, Arial,sans-serif; font-size:15px; line-height:22px; padding-bottom:8px;width:50%;">
 
-                                        <div mc:edit="text_3"><b>The amount payable to <span>Plumeria Retreat Pawna lake
-
-                                              AC cottage </span> for this booking
+                                        <div mc:edit="text_3"><b>The amount payable to <span>${accommodationName}</span> for this booking
 
                                             is <span>INR ${advancePayable}</span> as per the details below. Please email us at
 
@@ -1107,7 +1106,7 @@ const CreateBooking: React.FC = () => {
 
                                         <p style="padding-bottom: 5px;margin: 0px;">Mobile: <b>${mobile}</b></p>
 
-                                        <p style="padding-bottom: 5px;margin: 0px;">Check In: <b>${CheckinDate}}</b></p>
+                                        <p style="padding-bottom: 5px;margin: 0px;">Check In: <b>${CheckinDate}</b></p>
 
                                         <p style="padding-bottom: 5px;margin: 0px;">Check Out: <b>${CheckoutDate}</b></p>
 
@@ -1116,6 +1115,7 @@ const CreateBooking: React.FC = () => {
                                         <p style="padding-bottom: 5px;margin: 0px;">Adult: <b>${adult}</b></p>
 
                                         <p style="padding-bottom: 5px;margin: 0px;">Child: <b>${child}</b></p>
+                                                  <p style="padding-bottom: 5px;margin: 0px;">Rooms: <b>${rooms}</b></p>
 
                                         <p style="padding-bottom: 5px;margin: 0px;">Veg Count: <b>${vegCount}</b></p>
 
@@ -1176,7 +1176,7 @@ const CreateBooking: React.FC = () => {
 
                                         style="color:#000000; font-family:Lato, Arial,sans-serif; font-size:15px; line-height:22px; padding-bottom:24px;">
 
-                                        <div mc:edit="text_3"><b>Booking Cancellation Policy:</b> From ${CheckinDate},100%
+                                        <div mc:edit="text_3"><b>Booking Cancellation Policy:</b> From >${BookingDate},100%
 
                                           penalty will be
 
@@ -1230,9 +1230,7 @@ const CreateBooking: React.FC = () => {
 
                                           stage,
 
-                                          you will be notified and this confirmation email & Plumeria Retreat Pawna lake
-
-                                          AC cottage Booking ID will be null and void.</div>
+                                          you will be notified and this confirmation email & Nirwana Stays Booking ID will be null and void.</div>
 
                                       </td>
 
@@ -1382,7 +1380,7 @@ const CreateBooking: React.FC = () => {
 
                                                 <span><b>Contact Number- </b></span>
 
-                                                <span>Babu</span>- <span>9923366051</span>
+                                                <span>Tushar Thakar</span>- <span>9175106307</span>
 
                                               </div>
 
@@ -1420,11 +1418,9 @@ const CreateBooking: React.FC = () => {
 
                                           email account that is not monitored. To ensure that you receive
 
-                                          communication related to your booking from Plumeria Retreat Pawna lake AC
+                                          communication related to your booking from Nirwana Stays , please add <a href="mailto:bookings@nirwanastays.com"
 
-                                          cottage , please add <a href="mailto:babukale60@gmail.com "
-
-                                            style="color: #164e6f;"><b>babukale60@gmail.com </b></a> to your contact list
+                                            style="color: #164e6f;"><b>bookings@nirwanastays.com</b></a> to your contact list
 
                                           and
 
@@ -1674,19 +1670,20 @@ const CreateBooking: React.FC = () => {
         bookingPayload.advance_amount,
         (bookingPayload.total_amount - bookingPayload.advance_amount),
         bookingPayload.guest_phone || '',
-        bookingPayload.rooms,
+        (bookingPayload.adults + bookingPayload.children),
         bookingPayload.adults,
         bookingPayload.children,
+        bookingPayload.rooms,
         bookingPayload.food_veg,
         bookingPayload.food_nonveg,
         bookingPayload.food_jain,
         accommodations.find(acc => acc.id === bookingPayload.accommodation_id)?.name || '',
         accommodations.find(acc => acc.id === bookingPayload.accommodation_id)?.address || '',
-        (accommodations.find(acc => acc.id === bookingPayload.accommodation_id)?.latitude || '').toString(),
+        (accommodations.find(acc => acc.id === bookingPayload.accommodation_id)?.latitude || 0).toString(),
         bookingPayload.coupon,
-	      bookingPayload.discount,
-	      bookingPayload.full_amount,
-        (accommodations.find(acc => acc.id === bookingPayload.accommodation_id)?.longitude || '').toString(),
+        bookingPayload.discount,
+        bookingPayload.full_amount,
+        (accommodations.find(acc => acc.id === bookingPayload.accommodation_id)?.longitude || 0).toString(),
         result.data.owner_email.toString()
       );
       alert('Booking created successfully!');
