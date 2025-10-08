@@ -355,22 +355,22 @@ const Bookings: React.FC = () => {
               Showing {bookings.length} of {pagination.total} bookings
             </p>
           </div>
-          <div className="mt-4 sm:mt-0 flex space-x-3">
+          <div className="mt-4 sm:mt-0 flex justify-end">
             <Link
               to="/bookings/new"
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-navy-600 hover:bg-navy-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-navy-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-500"
             >
               <Plus className="h-4 w-4 mr-2" />
               New Booking
             </Link>
-            <button
+            {/* <button
               type="button"
               onClick={exportToCSV}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-navy-600 hover:bg-navy-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-500"
             >
               <Download className="h-4 w-4 mr-2" />
               Export
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
@@ -635,13 +635,13 @@ const Bookings: React.FC = () => {
                         >
                           <Trash2 className="h-5 w-5" />
                         </button>
-                        <button
+                        {/* <button
                           onClick={() => handleOpenPaymentModal(booking.id)}
                           className="text-blue-600 hover:text-blue-900"
                           title="Add Payment"
                         >
                           <DollarSign className="h-5 w-5" />
-                        </button>
+                        </button> */}
                       </div>
                     </td>
                   </tr>
