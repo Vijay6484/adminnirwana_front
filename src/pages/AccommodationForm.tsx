@@ -34,8 +34,6 @@ interface Accommodation {
   maxGuests?: number;
 
   // Villa-specific fields
-  villaBHK?: string;
-  minPersons?: number;
   maxPersonsVilla?: number;
   extraPersonRate?: number;
 }
@@ -87,8 +85,6 @@ const AccommodationForm: React.FC = () => {
     maxGuests: 2,
 
     // Villa defaults
-    villaBHK: '',
-    minPersons: 0,
     maxPersonsVilla: 0,
     extraPersonRate: 0,
   });
@@ -172,8 +168,6 @@ const AccommodationForm: React.FC = () => {
         maxGuests: data.packages?.pricing?.maxGuests || 2,
 
         // Map villa fields if present in basicInfo
-        villaBHK: data.basicInfo?.villaBHK || '',
-        minPersons: data.basicInfo?.minPersons || 0,
         maxPersonsVilla: data.basicInfo?.maxPersonsVilla || 0,
         extraPersonRate: data.basicInfo?.extraPersonRate || 0,
       });
@@ -195,7 +189,7 @@ const AccommodationForm: React.FC = () => {
       });
     } else if (name === 'price' || name === 'capacity' || name === 'rooms' || 
                name === 'latitude' || name === 'longitude' || name === 'adultPrice' || 
-               name === 'childPrice' || name === 'maxGuests' || name === 'minPersons' || name === 'maxPersonsVilla' || name === 'extraPersonRate') {
+               name === 'childPrice' || name === 'maxGuests' || name === 'maxPersonsVilla' || name === 'extraPersonRate') {
       setFormData({
         ...formData,
         [name]: value === '' ? 0 : Number(value),
@@ -324,17 +318,8 @@ const AccommodationForm: React.FC = () => {
 
     // Villa-specific validation (only if type === 'Villa')
     if (formData.type === 'Villa') {
-      if (!formData.villaBHK || formData.villaBHK.trim() === '') {
-        newErrors.villaBHK = 'Villa BHK is required';
-      }
-      if (!formData.minPersons || formData.minPersons <= 0) {
-        newErrors.minPersons = 'Minimum persons must be greater than 0';
-      }
       if (!formData.maxPersonsVilla || formData.maxPersonsVilla <= 0) {
         newErrors.maxPersonsVilla = 'Maximum persons must be greater than 0';
-      }
-      if (formData.maxPersonsVilla && formData.minPersons && formData.maxPersonsVilla < formData.minPersons) {
-        newErrors.maxPersonsVilla = 'Maximum persons must be greater than or equal to minimum persons';
       }
     }
 
@@ -381,8 +366,6 @@ const AccommodationForm: React.FC = () => {
 
           // Villa fields inside basicInfo (if villa selected)
           ...(formData.type === 'Villa' ? {
-            villaBHK: formData.villaBHK,
-            minPersons: formData.minPersons,
             maxPersonsVilla: formData.maxPersonsVilla,
             extraPersonRate: formData.extraPersonRate
           } : {})
@@ -709,42 +692,6 @@ const AccommodationForm: React.FC = () => {
               {formData.type === 'Villa' && (
                 <>
                   <div className="sm:col-span-2">
-                    <label htmlFor="villaBHK" className="block text-sm font-medium text-gray-700">
-                      Villa BHK
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        type="text"
-                        name="villaBHK"
-                        id="villaBHK"
-                        value={formData.villaBHK}
-                        onChange={handleChange}
-                        placeholder="e.g., 7 BHK"
-                        className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.villaBHK ? 'border-red-300' : 'border-gray-300'}`}
-                      />
-                      {errors.villaBHK && <p className="mt-1 text-sm text-red-600">{errors.villaBHK}</p>}
-                    </div>
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label htmlFor="minPersons" className="block text-sm font-medium text-gray-700">
-                      Minimum Persons (Included)
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        type="number"
-                        name="minPersons"
-                        id="minPersons"
-                        min={1}
-                        value={formData.minPersons}
-                        onChange={handleChange}
-                        className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.minPersons ? 'border-red-300' : 'border-gray-300'}`}
-                      />
-                      {errors.minPersons && <p className="mt-1 text-sm text-red-600">{errors.minPersons}</p>}
-                    </div>
-                  </div>
-
-                  <div className="sm:col-span-2">
                     <label htmlFor="maxPersonsVilla" className="block text-sm font-medium text-gray-700">
                       Maximum Persons (Allowed)
                     </label>
@@ -1043,23 +990,25 @@ const AccommodationForm: React.FC = () => {
                 </div>
               </div>
 
-              <div className="sm:col-span-3">
-                <label htmlFor="childPrice" className="block text-sm font-medium text-gray-700">
-                  Child Price (₹)
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="number"
-                    name="childPrice"
-                    id="childPrice"
-                    min="0"
-                    step="0.01"
-                    value={formData.childPrice}
-                    onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  />
+              {formData.type !== 'Villa' && (
+                <div className="sm:col-span-3">
+                  <label htmlFor="childPrice" className="block text-sm font-medium text-gray-700">
+                    Child Price (₹)
+                  </label>
+                  <div className="mt-1">
+                    <input
+                      type="number"
+                      name="childPrice"
+                      id="childPrice"
+                      min="0"
+                      step="0.01"
+                      value={formData.childPrice}
+                      onChange={handleChange}
+                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
