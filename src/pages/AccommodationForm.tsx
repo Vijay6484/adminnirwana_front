@@ -366,8 +366,8 @@ const AccommodationForm: React.FC = () => {
 
           // Villa fields inside basicInfo (if villa selected)
           ...(formData.type === 'Villa' ? {
-            maxPersonsVilla: formData.maxPersonsVilla,
-            extraPersonRate: formData.extraPersonRate
+            MaxPersonVilla: formData.maxPersonsVilla,
+            RatePersonVilla: formData.extraPersonRate
           } : {})
         },
         location: {
