@@ -519,7 +519,11 @@ const CreateBooking: React.FC = () => {
         width: 15px !important;
       }
 
-      @media (max-width:600px) {
+      /*
+       * THIS IS THE CRITICAL FIX: "and (screen)"
+       * This tells the mobile styles NOT to run during printing.
+      */
+      @media (max-width:600px) and (screen) {
         .logoimg {
           padding-top: 5px !important;
         }
@@ -576,7 +580,8 @@ const CreateBooking: React.FC = () => {
     }
 
     /* --- PRINT STYLES --- */
-    /* This will override mobile styles when creating a PDF */
+    /* This will override ALL mobile styles when creating a PDF */
+    /* This forces the 675px DESKTOP layout for ALL PDFs */
     @media print {
       body {
         background: #ffffff !important;
@@ -656,7 +661,7 @@ const CreateBooking: React.FC = () => {
                 style="border-bottom: 3px solid #216896;">
                 <table width="675" border="0" cellspacing="0" cellpadding="0" class="mobile-shell">
                   <tr>
-                    <td class="td"
+                    <td class.="td"
                       style="padding-top: 60px; width:675px; min-width:675px; font-size:0pt; line-height:0pt; padding:0; margin:0; font-weight:normal;">
                       <table width="100%" border="0" cellspacing="0" cellpadding="0">
                         <tr>
