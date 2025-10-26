@@ -569,6 +569,7 @@ const AccommodationForm: React.FC = () => {
                     <option value="Glamping">Glamping</option>
                     <option value="Standard">Standard Room</option>
                     <option value="Deluxe">Deluxe Room</option>
+                    <option value="Camping">Camping</option>
                   </select>
                   {errors.type && <p className="mt-1 text-sm text-red-600">{errors.type}</p>}
                 </div>
