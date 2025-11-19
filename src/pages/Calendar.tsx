@@ -1884,7 +1884,7 @@ const Calendar = () => {
                       </label>
                       
                       {/* Block All Rooms */}
-                      <div className="mb-4">
+                      {/* <div className="mb-4">
                         <label className="flex items-center cursor-pointer">
                           <input
                             type="checkbox"
@@ -1897,7 +1897,7 @@ const Calendar = () => {
                           />
                           <span className="ml-2 text-sm text-gray-700">Block All Rooms</span>
                         </label>
-                      </div>
+                      </div> */}
                       
                       {!isBlockAll && (
                         <>
