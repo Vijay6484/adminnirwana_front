@@ -82,6 +82,9 @@ const Bookings: React.FC = () => {
   const [selectedBooking, setSelectedBooking] = useState<number | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [bookingForPayment, setBookingForPayment] = useState<number | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<Booking | null>(null);
+  const [deleting, setDeleting] = useState(false);
   
   // Filter states
   const [filters, setFilters] = useState<FilterOptions>({});
@@ -308,6 +311,41 @@ const Bookings: React.FC = () => {
 
   const handlePaymentAdded = () => {
     fetchBookings(filters);
+  };
+
+  const handleDeleteClick = (booking: Booking) => {
+    setBookingToDelete(booking);
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!bookingToDelete) return;
+
+    try {
+      setDeleting(true);
+      const response = await axios.delete(`${API_BASE_URL}/bookings/delete/${bookingToDelete.id}`);
+      
+      if (response.data.success) {
+        // Refresh bookings list
+        await fetchBookings(filters);
+        setDeleteModalOpen(false);
+        setBookingToDelete(null);
+      } else {
+        alert('Failed to delete booking: ' + (response.data.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Error deleting booking:', err);
+      alert(axios.isAxiosError(err) 
+        ? err.response?.data?.message || err.message 
+        : 'Failed to delete booking. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteModalOpen(false);
+    setBookingToDelete(null);
   };
 
   const exportToCSV = async () => {
@@ -643,19 +681,7 @@ const Bookings: React.FC = () => {
                     <td className="px-6 py-4 text-sm text-gray-500">
                       <div className="flex space-x-2">
                         <button
-                          onClick={async () => {
-                            // Commented out API call
-                            // try {
-                            //   const response = await axios.delete(`${API_BASE_URL}/bookings/delete/${booking.id}`);
-                            //   console.log('Delete success:', response.data);
-                            //   // optionally refresh data here
-                            // } catch (error) {
-                            //   console.error('Delete failed:', error);
-                            // }
-                            
-                            // Mock delete
-                            setBookings(prev => prev.filter(b => b.id !== booking.id));
-                          }}
+                          onClick={() => handleDeleteClick(booking)}
                           className="text-red-600 hover:text-red-900"
                           title="Delete"
                         >
@@ -803,6 +829,59 @@ const Bookings: React.FC = () => {
         onPaymentAdded={handlePaymentAdded}
         apiBaseUrl=""
       />
+    )}
+
+    {/* Delete Confirmation Modal */}
+    {deleteModalOpen && bookingToDelete && (
+      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+          <div className="mt-3 text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+              <Trash2 className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mt-5">
+              Delete Booking
+            </h3>
+            <div className="mt-2 px-7 py-3">
+              <p className="text-sm text-gray-500">
+                Are you sure you want to delete this booking?
+              </p>
+              <div className="mt-4 text-left bg-gray-50 p-3 rounded-md">
+                <p className="text-sm font-medium text-gray-700">Booking ID: {bookingToDelete.bookingId}</p>
+                <p className="text-sm text-gray-600">Guest: {bookingToDelete.guest}</p>
+                <p className="text-sm text-gray-600">Check-in: {bookingToDelete.checkIn}</p>
+                <p className="text-sm text-gray-600">Amount: {bookingToDelete.amount}</p>
+              </div>
+              <p className="text-sm text-red-600 mt-3 font-medium">
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex justify-center gap-4 px-4 py-3">
+              <button
+                onClick={handleCancelDelete}
+                disabled={deleting}
+                className="px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 flex items-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     )}
   </div>
 );
