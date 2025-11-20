@@ -1,79 +1,136 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Trash2, Edit2, XCircle, AlertCircle, CheckCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Plus, Search, Trash2, Edit2, XCircle, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
+
+const API_BASE_URL = 'https://api.nirwanastays.com/admin/blogs';
 
 interface Blog {
   id: number;
+  slug: string;
   title: string;
+  excerpt: string;
+  author: string;
+  date: string;
+  read_time: string;
   category: string;
-  publishDate: string;
-  status: 'published' | 'draft';
+  tags: string[];
   image: string;
+  status: 'published' | 'draft';
+  created_at?: string;
+  updated_at?: string;
 }
 
 const Blogs: React.FC = () => {
+  const navigate = useNavigate();
   const [blogs, setBlogs] = useState<Blog[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
 
   const categories = [
     { id: 'all', name: 'All Categories' },
-    { id: 'camping', name: 'Camping' },
-    { id: 'nature', name: 'Nature' },
-    { id: 'nearby-places', name: 'Nearby Places Tour' },
-    { id: 'events', name: 'Events' }
+    { id: 'Travel Guide', name: 'Travel Guide' },
+    { id: 'Camping', name: 'Camping' },
+    { id: 'Nature', name: 'Nature' },
+    { id: 'Events', name: 'Events' }
   ];
 
-  // Mock data for demonstration
+  // Fetch blogs from API
   useEffect(() => {
-    setBlogs([
-      {
-        id: 1,
-        title: 'Top 10 Camping Spots Near Our Resort',
-        category: 'camping',
-        publishDate: '2025-03-15',
-        status: 'published',
-        image: 'https://images.pexels.com/photos/2666598/pexels-photo-2666598.jpeg'
-      },
-      {
-        id: 2,
-        title: 'Wildlife Photography Guide',
-        category: 'nature',
-        publishDate: '2025-03-14',
-        status: 'published',
-        image: 'https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg'
-      },
-      {
-        id: 3,
-        title: 'Upcoming Summer Festival',
-        category: 'events',
-        publishDate: '2025-03-13',
-        status: 'draft',
-        image: 'https://images.pexels.com/photos/2747449/pexels-photo-2747449.jpeg'
-      }
-    ]);
+    fetchBlogs();
   }, []);
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this blog?')) {
-      setBlogs(blogs.filter(blog => blog.id !== id));
+  const fetchBlogs = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (selectedCategory !== 'all') params.append('category', selectedCategory);
+      
+      const url = `${API_BASE_URL}?${params.toString()}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch blogs');
+      }
+      
+      const data = await response.json();
+      setBlogs(data.blogs || data || []);
+    } catch (err: any) {
+      console.error('Error fetching blogs:', err);
+      setError(err.message || 'Failed to load blogs');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err.message || 'Failed to load blogs'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const filteredBlogs = blogs.filter(blog => {
-    const matchesSearch = blog.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || blog.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      fetchBlogs();
+    }, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm, selectedCategory]);
+
+  const handleDelete = async (id: number) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        setDeleteLoading(id);
+        const response = await fetch(`${API_BASE_URL}/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete blog');
+        }
+
+        Swal.fire('Deleted!', 'Blog has been deleted.', 'success');
+        fetchBlogs();
+      } catch (err: any) {
+        console.error('Error deleting blog:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: err.message || 'Failed to delete blog'
+        });
+      } finally {
+        setDeleteLoading(null);
+      }
+    }
+  };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const getImageUrl = (image: string) => {
+    if (!image) return 'https://images.pexels.com/photos/2666598/pexels-photo-2666598.jpeg';
+    if (image.startsWith('http')) return image;
+    if (image.startsWith('/uploads')) return `https://api.nirwanastays.com${image}`;
+    return image;
   };
 
   return (
@@ -130,62 +187,100 @@ const Blogs: React.FC = () => {
         </select>
       </div>
 
-      {/* Blog Grid */}
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredBlogs.map(blog => (
-          <div key={blog.id} className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="relative h-48">
-              <img
-                src={blog.image}
-                alt={blog.title}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/2666598/pexels-photo-2666598.jpeg';
-                }}
-              />
-              <div className="absolute top-2 right-2">
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    blog.status === 'published'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}
-                >
-                  {blog.status.charAt(0).toUpperCase() + blog.status.slice(1)}
-                </span>
-              </div>
-            </div>
-            <div className="p-4">
-              <h3 className="text-lg font-medium text-gray-900 line-clamp-2">
-                {blog.title}
-              </h3>
-              <div className="mt-2 flex items-center text-sm text-gray-500">
-                <span className="capitalize">{blog.category}</span>
-                <span className="mx-2">•</span>
-                <span>{formatDate(blog.publishDate)}</span>
-              </div>
-              <div className="mt-4 flex space-x-2">
-                <Link
-                  to={`/blogs/${blog.id}/edit`}
-                  className="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-500"
-                >
-                  <Edit2 className="h-4 w-4 mr-1" />
-                  Edit
-                </Link>
-                <button
-                  onClick={() => handleDelete(blog.id)}
-                  className="inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-red-600 bg-white hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-20">
+          <Loader className="h-8 w-8 animate-spin text-navy-600" />
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="flex">
+            <AlertCircle className="h-5 w-5 text-red-400" />
+            <div className="ml-3">
+              <p className="text-sm font-medium text-red-800">{error}</p>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* Blog Grid */}
+      {!loading && !error && (
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {blogs.map(blog => (
+            <div key={blog.id} className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="relative h-48">
+                <img
+                  src={getImageUrl(blog.image)}
+                  alt={blog.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/2666598/pexels-photo-2666598.jpeg';
+                  }}
+                />
+                <div className="absolute top-2 right-2">
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      blog.status === 'published'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}
+                  >
+                    {blog.status.charAt(0).toUpperCase() + blog.status.slice(1)}
+                  </span>
+                </div>
+              </div>
+              <div className="p-4">
+                <h3 className="text-lg font-medium text-gray-900 line-clamp-2">
+                  {blog.title}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500 line-clamp-2">
+                  {blog.excerpt}
+                </p>
+                <div className="mt-2 flex items-center text-sm text-gray-500">
+                  <span className="capitalize">{blog.category}</span>
+                  <span className="mx-2">•</span>
+                  <span>{formatDate(blog.date)}</span>
+                </div>
+                {blog.tags && blog.tags.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {blog.tags.slice(0, 3).map((tag, idx) => (
+                      <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-4 flex space-x-2">
+                  <Link
+                    to={`/blogs/${blog.id}`}
+                    className="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-500"
+                  >
+                    <Edit2 className="h-4 w-4 mr-1" />
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(blog.id)}
+                    disabled={deleteLoading === blog.id}
+                    className="inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-red-600 bg-white hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                  >
+                    {deleteLoading === blog.id ? (
+                      <Loader className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Empty State */}
-      {filteredBlogs.length === 0 && (
+      {!loading && !error && blogs.length === 0 && (
         <div className="text-center py-10">
           <svg
             className="mx-auto h-12 w-12 text-gray-400"

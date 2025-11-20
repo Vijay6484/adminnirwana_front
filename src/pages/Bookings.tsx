@@ -153,16 +153,37 @@ const Bookings: React.FC = () => {
   };
 
   const fetchBookings = async (filterParams: FilterOptions = {}) => {
-    // Commented out API calls - using mock data
     try {
       setLoading(true);
       setError(null);
       
-      const params = {
-        ...filterParams,
+      const params: any = {
         page: pagination.page,
         limit: pagination.limit
       };
+
+      // Add search parameter
+      if (filterParams.search) {
+        params.search = filterParams.search;
+      }
+
+      // Add payment status filter
+      if (filterParams.payment_status) {
+        params.payment_status = filterParams.payment_status;
+      }
+
+      // Add booking status filter
+      if (filterParams.status) {
+        params.status = filterParams.status;
+      }
+
+      // Add date range filters
+      if (filterParams.start_date) {
+        params.start_date = filterParams.start_date;
+      }
+      if (filterParams.end_date) {
+        params.end_date = filterParams.end_date;
+      }
 
       const response = await axios.get<ApiResponse>(`${API_BASE_URL}/bookings`, { params });
       
@@ -228,17 +249,16 @@ const Bookings: React.FC = () => {
 
   // Initial load
   useEffect(() => {
-    fetchBookings();
+    fetchBookings(filters);
   }, [pagination.page, pagination.limit]);
 
   // Apply filters with debounce for search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (searchTerm) {
-        fetchBookings({ ...filters, search: searchTerm });
-      } else {
-        fetchBookings(filters);
-      }
+      const searchFilters = searchTerm ? { ...filters, search: searchTerm } : filters;
+      // Reset to page 1 when search changes
+      setPagination(prev => ({ ...prev, page: 1 }));
+      fetchBookings(searchFilters);
     }, 500);
 
     return () => clearTimeout(timeoutId);
@@ -254,6 +274,8 @@ const Bookings: React.FC = () => {
     if (searchTerm) newFilters.search = searchTerm;
     
     setFilters(newFilters);
+    // Reset to page 1 when filters change
+    setPagination(prev => ({ ...prev, page: 1 }));
     fetchBookings(newFilters);
     setFilterOpen(false);
   };
@@ -265,11 +287,14 @@ const Bookings: React.FC = () => {
     setBookingStatusFilter('');
     setSearchTerm('');
     setFilters({});
-    fetchBookings();
+    // Reset to page 1
+    setPagination(prev => ({ ...prev, page: 1 }));
+    fetchBookings({});
   };
 
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }));
+    // Fetch will be triggered by useEffect when pagination.page changes
   };
 
   const handleOpenDetails = (id: number) => {
@@ -446,7 +471,8 @@ const Bookings: React.FC = () => {
                   <option value="success">Paid</option>
                   <option value="partial">Partial</option>
                   <option value="failed">Unpaid</option>
-                  <option value="">Pending</option>
+                  <option value="pending">Pending</option>
+                  <option value="expired">Expired</option>
                 </select>
               </div>
               <div>
