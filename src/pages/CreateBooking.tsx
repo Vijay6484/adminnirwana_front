@@ -139,7 +139,7 @@ const CreateBooking: React.FC = () => {
         if (data.success && Array.isArray(data.data)) {
           const filteredCoupons = data.data.filter((coupon: Coupon) => {
             if (!coupon.active) return false;
-            if (coupon.accommodationType === "All") return true;
+            if (coupon.accommodationType === "all") return true;
             if (!coupon.accommodationType) return true;
             return coupon.accommodationType === selectedAccommodation.name;
           });
