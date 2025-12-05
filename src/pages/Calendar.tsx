@@ -1330,19 +1330,52 @@ const Calendar = () => {
     setIsBlockAll(false);
     
     if (id) {
-      const defaultPrices = getDefaultPrices(id);
-      setAdultPrice(defaultPrices.adult || '');
-      setChildPrice(defaultPrices.child || '');
-      
       if (selectedDay) {
         const dateStr = format(selectedDay, 'yyyy-MM-dd');
-        const available = await calculateAvailableRooms(id, dateStr);
-        setAvailableRooms(available);
-        setSelectedRoom(available);
-        const status = getRoomStatus(id, dateStr);
-        setRoomStatus(status);
+        
+        // Check if there's a blocked date entry for this date and accommodation
+        const blockedDate = blockedDates.find(b =>
+          b.blocked_date === dateStr &&
+          b.accommodation_id === id
+        );
+        
+        if (blockedDate) {
+          // Load special prices from blocked date
+          setEditingDate(blockedDate);
+          setReason(blockedDate.reason || '');
+          setSelectedRoom(0);
+          setAdultPrice(blockedDate.adult_price || '');
+          setChildPrice(blockedDate.child_price || '');
+          setIsBlockAll(blockedDate.rooms === null);
+          
+          const available = await calculateAvailableRooms(id, dateStr);
+          console.log("Available rooms on accommodation change:", available);
+          setSelectedRoom(available);
+          setAvailableRooms(available);
+          const status = getRoomStatus(id, dateStr);
+          setRoomStatus(status);
+        } else {
+          // No blocked date found, use default prices
+          setEditingDate(null);
+          const defaultPrices = getDefaultPrices(id);
+          setAdultPrice(defaultPrices.adult || '');
+          setChildPrice(defaultPrices.child || '');
+          
+          const available = await calculateAvailableRooms(id, dateStr);
+          setAvailableRooms(available);
+          setSelectedRoom(available);
+          const status = getRoomStatus(id, dateStr);
+          setRoomStatus(status);
+        }
+      } else {
+        // No date selected, just set default prices
+        setEditingDate(null);
+        const defaultPrices = getDefaultPrices(id);
+        setAdultPrice(defaultPrices.adult || '');
+        setChildPrice(defaultPrices.child || '');
       }
     } else {
+      setEditingDate(null);
       setAdultPrice('');
       setChildPrice('');
       setAvailableRooms(null);
