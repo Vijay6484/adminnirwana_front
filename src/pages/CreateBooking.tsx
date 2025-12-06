@@ -252,10 +252,12 @@ const CreateBooking: React.FC = () => {
     const calculateAvailableRooms = async () => {
       if (!formData.accommodation_id || !formData.check_in || !selectedAccommodation) {
         setAvailableRooms(0);
+        setShowRoomAvailability(false);
         return;
       }
 
       const accommodationId = parseInt(formData.accommodation_id);
+      const totalRooms = selectedAccommodation.available_rooms || 0;
       const booked = await fetchBookedRooms(accommodationId, formData.check_in);
 
       setBookedRooms(booked);
@@ -276,7 +278,6 @@ const CreateBooking: React.FC = () => {
       }
       setBlockedRoomsCount(blockedRooms);
 
-      const totalRooms = selectedAccommodation.available_rooms || 0;
       const bookedCount = booked || 0;
       const blockedCount = blockedRooms || 0;
 
