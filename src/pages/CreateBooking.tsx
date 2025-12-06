@@ -265,15 +265,27 @@ const CreateBooking: React.FC = () => {
       const blockedForDate = blockedDates.find(
         b => b.accommodation_id === accommodationId && b.blocked_date === formData.check_in
       );
-      // Handle null rooms_blocked (means all rooms blocked, but we'll use totalRooms for calculation)
-      // If rooms_blocked is null, it means all rooms are blocked, so blockedRooms = totalRooms
+      // Handle blocked rooms - check both rooms_blocked and rooms fields
+      // If rooms_blocked or rooms is null, it means all rooms are blocked
+      // Negative values in 'rooms' field mean rooms are blocked (e.g., -3 means 3 rooms blocked)
+      // Positive values mean rooms are released/added back (so they're not blocked)
       let blockedRooms = 0;
       if (blockedForDate) {
+        // Check if all rooms are blocked (null means all rooms blocked)
         if (blockedForDate.rooms_blocked === null || blockedForDate.rooms === null) {
           // All rooms are blocked
           blockedRooms = totalRooms;
         } else {
-          blockedRooms = blockedForDate.rooms_blocked || 0;
+          // Use rooms_blocked if available, otherwise use rooms
+          // The 'rooms' field can be negative (blocked) or positive (released)
+          const roomsValue = blockedForDate.rooms_blocked !== undefined && blockedForDate.rooms_blocked !== null
+            ? blockedForDate.rooms_blocked
+            : (blockedForDate.rooms !== undefined && blockedForDate.rooms !== null ? blockedForDate.rooms : 0);
+          
+          const roomsNum = Number(roomsValue) || 0;
+          // If negative, it means rooms are blocked (convert to positive for blocked count)
+          // If positive or zero, it means rooms are released or no blocking (so no additional blocking)
+          blockedRooms = roomsNum < 0 ? Math.abs(roomsNum) : 0;
         }
       }
       setBlockedRoomsCount(blockedRooms);
