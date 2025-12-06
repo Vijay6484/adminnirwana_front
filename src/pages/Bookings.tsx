@@ -571,13 +571,13 @@ const Bookings: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Food Preference
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Accommodation
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Check In
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Check Out
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -622,13 +622,13 @@ const Bookings: React.FC = () => {
                         <span>Jain Count: <span>{booking.jainCount}</span></span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 hidden md:table-cell">
+                    <td className="px-6 py-4 text-sm text-gray-500">
                       {booking.accommodation}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">
+                    <td className="px-6 py-4 text-sm text-gray-500">
                       {booking.checkIn}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 hidden lg:table-cell">
+                    <td className="px-6 py-4 text-sm text-gray-500">
                       {booking.checkOut}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">

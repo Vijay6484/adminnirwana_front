@@ -35,7 +35,10 @@ interface BlockedDate {
   id: number;
   accommodation_id: number;
   blocked_date: string;
-  rooms_blocked: number;
+  rooms_blocked: number | null;
+  rooms?: number | null;
+  adult_price?: number | null;
+  child_price?: number | null;
 }
 
 const _BASE_URL = 'https://api.nirwanastays.com';
@@ -243,7 +246,7 @@ const CreateBooking: React.FC = () => {
 
       validateDates(formData.check_in, nextDayString);
     }
-  }, [formData.check_in]);
+  }, [formData.check_in, formData.accommodation_id, selectedAccommodation, blockedDates]);
 
   useEffect(() => {
     const calculateAvailableRooms = async () => {
@@ -260,7 +263,17 @@ const CreateBooking: React.FC = () => {
       const blockedForDate = blockedDates.find(
         b => b.accommodation_id === accommodationId && b.blocked_date === formData.check_in
       );
-      const blockedRooms = blockedForDate ? blockedForDate.rooms_blocked : 0;
+      // Handle null rooms_blocked (means all rooms blocked, but we'll use totalRooms for calculation)
+      // If rooms_blocked is null, it means all rooms are blocked, so blockedRooms = totalRooms
+      let blockedRooms = 0;
+      if (blockedForDate) {
+        if (blockedForDate.rooms_blocked === null || blockedForDate.rooms === null) {
+          // All rooms are blocked
+          blockedRooms = totalRooms;
+        } else {
+          blockedRooms = blockedForDate.rooms_blocked || 0;
+        }
+      }
       setBlockedRoomsCount(blockedRooms);
 
       const totalRooms = selectedAccommodation.available_rooms || 0;
@@ -290,27 +303,41 @@ const CreateBooking: React.FC = () => {
     const endDate = new Date(checkOut);
     const accommodationId = parseInt(formData.accommodation_id);
 
-    if (!accommodationId) return;
+    if (!accommodationId || !selectedAccommodation) return;
 
     const accommodationBlockedDates = blockedDates.filter(
       date => date.accommodation_id === accommodationId
     );
 
+    const totalRooms = selectedAccommodation.available_rooms || 0;
+
     let errorDate: string | null = null;
     for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
       const dateString = d.toISOString().split('T')[0];
 
-      const isBlocked = accommodationBlockedDates.some(
+      const blockedForDate = accommodationBlockedDates.find(
         blocked => blocked.blocked_date === dateString
       );
 
-      if (isBlocked) {
-        errorDate = dateString;
-        break;
+      if (blockedForDate) {
+        // Check if date is fully blocked
+        // A date is fully blocked if:
+        // 1. rooms_blocked is null (all rooms blocked)
+        // 2. rooms is null (all rooms blocked - from Calendar interface)
+        // 3. rooms_blocked equals total rooms
+        const isFullyBlocked = 
+          blockedForDate.rooms_blocked === null ||
+          blockedForDate.rooms === null ||
+          (blockedForDate.rooms_blocked !== null && blockedForDate.rooms_blocked >= totalRooms);
+
+        if (isFullyBlocked) {
+          errorDate = dateString;
+          break;
+        }
       }
     }
 
-    setDateError(errorDate ? `The date ${errorDate} is blocked for this accommodation` : null);
+    setDateError(errorDate ? `The date ${errorDate} is fully blocked for this accommodation` : null);
   };
 
   const calculateDiscount = (totalAmount: number, coupon: Coupon | null): number => {
@@ -349,8 +376,30 @@ const CreateBooking: React.FC = () => {
 
     const adults = parseInt(formData.adults) || 0;
     const children = parseInt(formData.children) || 0;
-    const adultPrice = (selectedAccommodation.adultPrice || 0) * adults;
-    const childPrice = (selectedAccommodation.childPrice || 0) * children;
+    
+    // Check for special pricing from blocked dates for the check-in date
+    let adultPricePerPerson = selectedAccommodation.adultPrice || 0;
+    let childPricePerPerson = selectedAccommodation.childPrice || 0;
+    
+    if (formData.check_in && formData.accommodation_id) {
+      const accommodationId = parseInt(formData.accommodation_id);
+      const blockedForDate = blockedDates.find(
+        b => b.accommodation_id === accommodationId && b.blocked_date === formData.check_in
+      );
+      
+      // Use special pricing if available, otherwise use base pricing
+      if (blockedForDate) {
+        if (blockedForDate.adult_price !== null && blockedForDate.adult_price !== undefined) {
+          adultPricePerPerson = blockedForDate.adult_price;
+        }
+        if (blockedForDate.child_price !== null && blockedForDate.child_price !== undefined) {
+          childPricePerPerson = blockedForDate.child_price;
+        }
+      }
+    }
+    
+    const adultPrice = adultPricePerPerson * adults;
+    const childPrice = childPricePerPerson * children;
     const baseTotal = adultPrice + childPrice;
 
     const discountedTotal = calculateDiscount(baseTotal, appliedCoupon);
@@ -365,6 +414,9 @@ const CreateBooking: React.FC = () => {
     formData.adults,
     formData.children,
     formData.rooms,
+    formData.check_in,
+    formData.accommodation_id,
+    blockedDates,
     appliedCoupon
   ]);
   const downloadPdf = (
