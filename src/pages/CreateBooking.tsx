@@ -57,6 +57,7 @@ const CreateBooking: React.FC = () => {
   const [dateError, setDateError] = useState<string | null>(null);
   const [showRoomAvailability, setShowRoomAvailability] = useState(false);
   const [blockedRoomsCount, setBlockedRoomsCount] = useState<number>(0);
+  const [couponError, setCouponError] = useState<string>('');
   const [formData, setFormData] = useState({
     guest_name: '',
     guest_email: '',
@@ -142,9 +143,13 @@ const CreateBooking: React.FC = () => {
         if (data.success && Array.isArray(data.data)) {
           const filteredCoupons = data.data.filter((coupon: Coupon) => {
             if (!coupon.active) return false;
-            if (coupon.accommodationType === "all") return true;
-            if (!coupon.accommodationType) return true;
-            return coupon.accommodationType === selectedAccommodation.name;
+            const couponAccommodationType = coupon.accommodationType?.toLowerCase().trim();
+            if (couponAccommodationType === "all" || !couponAccommodationType) return true;
+            // Check if coupon type is contained in accommodation name or vice versa (handles truncated names)
+            const accommodationName = selectedAccommodation.name?.toLowerCase().trim();
+            const isMatch = accommodationName.includes(couponAccommodationType) || 
+                           couponAccommodationType.includes(accommodationName);
+            return isMatch;
           });
 
           setAllApplicableCoupons(filteredCoupons);
@@ -221,6 +226,9 @@ const CreateBooking: React.FC = () => {
     const { name, value } = e.target;
     if (name === 'coupon_code') {
       setAppliedCoupon(null);
+      if (couponError) {
+        setCouponError('');
+      }
     }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -232,6 +240,85 @@ const CreateBooking: React.FC = () => {
       coupon_code: coupon.code
     }));
     setAvailableCoupons([]);
+    setCouponError('');
+  };
+
+  const applyCoupon = async () => {
+    if (!formData.coupon_code.trim()) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+
+    if (!selectedAccommodation) {
+      setCouponError('Please select an accommodation first');
+      return;
+    }
+
+    try {
+      // Validate coupon via API (backend stores codes in uppercase)
+      const couponCodeToSearch = formData.coupon_code.trim().toUpperCase();
+      const response = await fetch(
+        `${_BASE_URL}/admin/coupons?search=${encodeURIComponent(couponCodeToSearch)}`
+      );
+      const result = await response.json();
+
+      if (!response.ok || !result.success || !result.data || result.data.length === 0) {
+        setCouponError('Invalid coupon code');
+        return;
+      }
+
+      // Find exact code match (API searches by code OR name, so we need to verify code match)
+      const couponToApply = result.data.find(
+        (coupon: Coupon) => coupon.code.toUpperCase() === couponCodeToSearch
+      );
+
+      if (!couponToApply) {
+        setCouponError('Invalid coupon code');
+        return;
+      }
+
+      // Check if coupon is active
+      if (!couponToApply.active) {
+        setCouponError('This coupon is not active');
+        return;
+      }
+
+      // Check accommodation type match (case-insensitive comparison with contains check)
+      const couponAccommodationType = couponToApply.accommodationType?.toLowerCase().trim() || '';
+      const accommodationName = selectedAccommodation.name?.toLowerCase().trim() || '';
+      
+      if (
+        couponAccommodationType &&
+        couponAccommodationType !== 'all' &&
+        !accommodationName.includes(couponAccommodationType) &&
+        !couponAccommodationType.includes(accommodationName)
+      ) {
+        setCouponError('This coupon is not valid for this accommodation');
+        return;
+      }
+
+      // Check minimum amount
+      const baseAmount = parseFloat(formData.total_amount) || 0;
+      const minAmount = couponToApply.minAmount ? parseFloat(couponToApply.minAmount) : 0;
+      if (minAmount > 0 && baseAmount < minAmount) {
+        setCouponError(`Minimum amount of ₹${minAmount} required for this coupon`);
+        return;
+      }
+
+      // All validations passed
+      setAppliedCoupon(couponToApply);
+      setCouponError('');
+      setAvailableCoupons([]);
+    } catch (error) {
+      console.error('Error validating coupon:', error);
+      setCouponError('Failed to validate coupon. Please try again.');
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setFormData(prev => ({ ...prev, coupon_code: '' }));
+    setCouponError('');
   };
 
   useEffect(() => {
@@ -1582,15 +1669,35 @@ const CreateBooking: React.FC = () => {
                   Coupon Code
                 </label>
                 <div className="relative">
-                  <input
-                    type="text"
-                    id="coupon_code"
-                    name="coupon_code"
-                    value={formData.coupon_code}
-                    onChange={handleChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-navy-500 focus:border-navy-500 sm:text-sm"
-                    placeholder="Enter coupon code"
-                  />
+                  <div className="flex gap-2 mt-1">
+                    <input
+                      type="text"
+                      id="coupon_code"
+                      name="coupon_code"
+                      value={formData.coupon_code}
+                      onChange={handleChange}
+                      className="flex-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-navy-500 focus:border-navy-500 sm:text-sm"
+                      placeholder="Enter coupon code"
+                      disabled={!!appliedCoupon}
+                    />
+                    {appliedCoupon ? (
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        className="px-4 py-2 bg-red-500 text-white rounded-md text-sm hover:bg-red-600"
+                      >
+                        Remove
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={applyCoupon}
+                        className="px-4 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
+                      >
+                        Apply
+                      </button>
+                    )}
+                  </div>
                   {availableCoupons.length > 0 && !appliedCoupon && (
                     <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto min-w-[300px]">
                       {availableCoupons.map(coupon => (
@@ -1610,8 +1717,13 @@ const CreateBooking: React.FC = () => {
                     </div>
                   )}
                 </div>
+                {couponError && (
+                  <div className="mt-1 text-sm text-red-600 bg-red-50 p-2 rounded-md">
+                    {couponError}
+                  </div>
+                )}
                 {appliedCoupon && (
-                  <div className="mt-1 text-sm text-green-600">
+                  <div className="mt-1 text-sm text-green-600 bg-green-50 p-2 rounded-md">
                     Coupon applied: {appliedCoupon.code} - {appliedCoupon.discountType === 'percentage'
                       ? `${appliedCoupon.discount}% discount`
                       : `₹${appliedCoupon.discount} discount`}
