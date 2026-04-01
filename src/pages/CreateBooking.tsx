@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Building2, User, CreditCard, UtensilsCrossed } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { api } from '../lib/apiClient';
 
 
 interface Accommodation {
-  id: number;
+  id: string;
   name: string;
   description: string;
   price: number;
@@ -32,16 +33,14 @@ interface Coupon {
 }
 
 interface BlockedDate {
-  id: number;
-  accommodation_id: number;
+  id: string | number;
+  accommodation_id: string;
   blocked_date: string;
   rooms_blocked: number | null;
   rooms?: number | null;
   adult_price?: number | null;
   child_price?: number | null;
 }
-
-const _BASE_URL = 'https://api.nirwanastays.com';
 
 const CreateBooking: React.FC = () => {
   const navigate = useNavigate();
@@ -92,8 +91,7 @@ const CreateBooking: React.FC = () => {
     const fetchAccommodations = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${_BASE_URL}/admin/properties/accommodations`);
-        const data = await response.json();
+        const { data } = await api.get('/admin/properties/accommodations');
 
         const accommodationsData = data.data || [];
         if (Array.isArray(accommodationsData)) {
@@ -116,8 +114,7 @@ const CreateBooking: React.FC = () => {
   useEffect(() => {
     const fetchBlockedDates = async () => {
       try {
-        const response = await fetch(`${_BASE_URL}/admin/calendar/blocked-dates`);
-        const data = await response.json();
+        const { data } = await api.get('/admin/calendar/blocked-dates');
         if (data.success && Array.isArray(data.data)) {
           setBlockedDates(data.data);
         }
@@ -137,8 +134,7 @@ const CreateBooking: React.FC = () => {
       }
 
       try {
-        const response = await fetch(`${_BASE_URL}/admin/coupons`);
-        const data = await response.json();
+        const { data } = await api.get('/admin/coupons');
 
         if (data.success && Array.isArray(data.data)) {
           const filteredCoupons = data.data.filter((coupon: Coupon) => {
@@ -147,8 +143,8 @@ const CreateBooking: React.FC = () => {
             if (couponAccommodationType === "all" || !couponAccommodationType) return true;
             // Check if coupon type is contained in accommodation name or vice versa (handles truncated names)
             const accommodationName = selectedAccommodation.name?.toLowerCase().trim();
-            const isMatch = accommodationName.includes(couponAccommodationType) || 
-                           couponAccommodationType.includes(accommodationName);
+            const isMatch = accommodationName.includes(couponAccommodationType) ||
+              couponAccommodationType.includes(accommodationName);
             return isMatch;
           });
 
@@ -179,11 +175,7 @@ const CreateBooking: React.FC = () => {
 
   const fetchAccommodationDetails = async (id: string) => {
     try {
-      const response = await fetch(`${_BASE_URL}/admin/properties/accommodations/${id}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch accommodation details');
-      }
-      const data = await response.json();
+      const { data } = await api.get(`/admin/properties/accommodations/${id}`);
       const accommodation: Accommodation = {
         id: data.id,
         name: data.basicInfo?.name || 'Unnamed Accommodation',
@@ -208,13 +200,11 @@ const CreateBooking: React.FC = () => {
     }
   }
 
-  const fetchBookedRooms = async (accommodationId: number, checkInDate: string) => {
+  const fetchBookedRooms = async (accommodationId: string, checkInDate: string) => {
     try {
-      const response = await fetch(`${_BASE_URL}/admin/bookings/room-occupancy?check_in=${checkInDate}&id=${accommodationId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch booked rooms');
-      }
-      const data = await response.json();
+      const { data } = await api.get('/bookings/room-occupancy', {
+        params: { check_in: checkInDate, id: accommodationId },
+      });
       return data.total_rooms || 0;
     } catch (error) {
       console.error('Error fetching booked rooms:', error);
@@ -257,12 +247,11 @@ const CreateBooking: React.FC = () => {
     try {
       // Validate coupon via API (backend stores codes in uppercase)
       const couponCodeToSearch = formData.coupon_code.trim().toUpperCase();
-      const response = await fetch(
-        `${_BASE_URL}/admin/coupons?search=${encodeURIComponent(couponCodeToSearch)}`
-      );
-      const result = await response.json();
+      const { data: result } = await api.get('/admin/coupons', {
+        params: { search: couponCodeToSearch },
+      });
 
-      if (!response.ok || !result.success || !result.data || result.data.length === 0) {
+      if (!result.success || !result.data || result.data.length === 0) {
         setCouponError('Invalid coupon code');
         return;
       }
@@ -286,7 +275,7 @@ const CreateBooking: React.FC = () => {
       // Check accommodation type match (case-insensitive comparison with contains check)
       const couponAccommodationType = couponToApply.accommodationType?.toLowerCase().trim() || '';
       const accommodationName = selectedAccommodation.name?.toLowerCase().trim() || '';
-      
+
       if (
         couponAccommodationType &&
         couponAccommodationType !== 'all' &&
@@ -343,7 +332,7 @@ const CreateBooking: React.FC = () => {
         return;
       }
 
-      const accommodationId = parseInt(formData.accommodation_id);
+      const accommodationId = formData.accommodation_id;
       const totalRooms = selectedAccommodation.available_rooms || 0;
       const booked = await fetchBookedRooms(accommodationId, formData.check_in);
 
@@ -368,7 +357,7 @@ const CreateBooking: React.FC = () => {
           const roomsValue = blockedForDate.rooms_blocked !== undefined && blockedForDate.rooms_blocked !== null
             ? blockedForDate.rooms_blocked
             : (blockedForDate.rooms !== undefined && blockedForDate.rooms !== null ? blockedForDate.rooms : 0);
-          
+
           const roomsNum = Number(roomsValue) || 0;
           // If negative, it means rooms are blocked (convert to positive for blocked count)
           // If positive or zero, it means rooms are released or no blocking (so no additional blocking)
@@ -401,7 +390,7 @@ const CreateBooking: React.FC = () => {
 
     const startDate = new Date(checkIn);
     const endDate = new Date(checkOut);
-    const accommodationId = parseInt(formData.accommodation_id);
+    const accommodationId = formData.accommodation_id;
 
     if (!accommodationId || !selectedAccommodation) return;
 
@@ -425,7 +414,7 @@ const CreateBooking: React.FC = () => {
         // 1. rooms_blocked is null (all rooms blocked)
         // 2. rooms is null (all rooms blocked - from Calendar interface)
         // 3. rooms_blocked equals total rooms
-        const isFullyBlocked = 
+        const isFullyBlocked =
           blockedForDate.rooms_blocked === null ||
           blockedForDate.rooms === null ||
           (blockedForDate.rooms_blocked !== null && blockedForDate.rooms_blocked >= totalRooms);
@@ -476,17 +465,17 @@ const CreateBooking: React.FC = () => {
 
     const adults = parseInt(formData.adults) || 0;
     const children = parseInt(formData.children) || 0;
-    
+
     // Check for special pricing from blocked dates for the check-in date
     let adultPricePerPerson = selectedAccommodation.adultPrice || 0;
     let childPricePerPerson = selectedAccommodation.childPrice || 0;
-    
+
     if (formData.check_in && formData.accommodation_id) {
-      const accommodationId = parseInt(formData.accommodation_id);
+      const accommodationId = formData.accommodation_id;
       const blockedForDate = blockedDates.find(
         b => b.accommodation_id === accommodationId && b.blocked_date === formData.check_in
       );
-      
+
       // Use special pricing if available, otherwise use base pricing
       if (blockedForDate) {
         if (blockedForDate.adult_price !== null && blockedForDate.adult_price !== undefined) {
@@ -497,7 +486,7 @@ const CreateBooking: React.FC = () => {
         }
       }
     }
-    
+
     const adultPrice = adultPricePerPerson * adults;
     const childPrice = childPricePerPerson * children;
     const baseTotal = adultPrice + childPrice;
@@ -539,9 +528,9 @@ const CreateBooking: React.FC = () => {
     accommodationName: string,
     accommodationAddress: string,
     latitude: string,
-	  coupon : string,
-	  discount : number,
-	  full_amount : number,
+    coupon: string,
+    discount: number,
+    full_amount: number,
     longitude: string,
     owner_email: string) => {
     const today: Date = new Date();
@@ -551,7 +540,7 @@ const CreateBooking: React.FC = () => {
     const year: number = today.getFullYear();
 
     const BookingDate: string = `${year}-${month}-${day}`;
-    const html = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+    const legacyHtml = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml"
   xmlns:o="urn:schemas-microsoft-com:office:office">
 
@@ -1117,8 +1106,8 @@ const CreateBooking: React.FC = () => {
                                         <div mc:edit="text_3"><b>Note</b> - Please do not reply to this email. It has
                                           been sent from an
                                           email account that is not monitored. To ensure that you receive
-                                          communication related to your booking from Nirwana Stays , please add <a href="mailto:bookings@nirwanastays.com"
-                                            style="color: #164e6f;"><b>bookings@nirwanastays.com</b></a> to your contact list
+                                          communication related to your booking from Nirwana Stays , please add <a href="mailto:bookings@arnastays.com"
+                                            style="color: #164e6f;"><b>bookings@arnastays.com</b></a> to your contact list
                                           and
                                           address book.</div>
                                       </td>
@@ -1170,42 +1159,170 @@ const CreateBooking: React.FC = () => {
   </table>
 </body>
 
-</html>`
+<\/html>`
+    const html = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Booking Confirmation</title>
+    <style>
+      body { margin: 0; padding: 0; background: #f5f7f9; font-family: "Lato", Arial, sans-serif; color: #1f2933; }
+      .container { max-width: 680px; margin: 0 auto; background: #ffffff; }
+      .header { background: #0f6f5c; color: #ffffff; padding: 28px 32px; }
+      .header h1 { margin: 0; font-size: 22px; font-weight: 700; }
+      .header p { margin: 6px 0 0; font-size: 13px; opacity: 0.9; }
+      .section { padding: 24px 32px; }
+      .title { font-size: 18px; margin: 0 0 8px; }
+      .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+      .grid { width: 100%; border-collapse: collapse; }
+      .grid td { padding: 4px 0; font-size: 13px; }
+      .divider { height: 1px; background: #e5e7eb; margin: 16px 0; }
+      .badge { display: inline-block; background: #e6f4ef; color: #0f6f5c; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+      .footer { background: #0f172a; color: #e2e8f0; padding: 20px 32px; font-size: 12px; }
+      .link { color: #0f6f5c; text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f7f9;">
+      <tr>
+        <td>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="container">
+            <tr>
+              <td class="header">
+                <h1>${accommodationName}</h1>
+                <p>Booking ID: <strong>${BookingId}</strong> | Booking Date: ${BookingDate}</p>
+              </td>
+            </tr>
+            <tr>
+              <td class="section">
+                <p><strong>Dear ${name},</strong></p>
+                <p style="margin: 8px 0 0;">
+                  ${accommodationName} has received a request for booking of your Camping as per the details below. The
+                  primary guest ${name} will be carrying a copy of this e-voucher.
+                </p>
+                <p style="margin: 8px 0 0;">For your reference, Booking ID is <strong>${BookingId}</strong>.</p>
+                <p style="margin: 8px 0 0;">
+                  <strong>The amount payable to ${accommodationName} for this booking is INR ${advancePayable}. Please email us at
+                  <a class="link" href="mailto:${owner_email}">${owner_email}</a> if there is any discrepancy in this payment amount.</strong>
+                </p>
+                <p style="margin: 12px 0 0;">Kindly consider this e-voucher for booking confirmation with the following inclusions and services.</p>
+                <div style="margin-top: 12px;"><span class="badge">All prices indicated below are in INR</span></div>
+              </td>
+            </tr>
+            <tr>
+              <td class="section">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td width="50%" style="padding-right: 8px;">
+                      <div class="card">
+                        <h3 class="title">Booking Details</h3>
+                        <table class="grid">
+                          <tr><td>Mobile:</td><td><strong>${mobile}</strong></td></tr>
+                          <tr><td>Check In:</td><td><strong>${CheckinDate}</strong></td></tr>
+                          <tr><td>Check Out:</td><td><strong>${CheckoutDate}</strong></td></tr>
+                          <tr><td>Total Person:</td><td><strong>${totalPerson}</strong></td></tr>
+                          <tr><td>Adult:</td><td><strong>${adult}</strong></td></tr>
+                          <tr><td>Child:</td><td><strong>${child}</strong></td></tr>
+                          <tr><td>Rooms:</td><td><strong>${rooms}</strong></td></tr>
+                          <tr><td>Veg Count:</td><td><strong>${vegCount}</strong></td></tr>
+                          <tr><td>Non Veg Count:</td><td><strong>${nonvegCount}</strong></td></tr>
+                          <tr><td>Jain Count:</td><td><strong>${joinCount}</strong></td></tr>
+                        </table>
+                      </div>
+                    </td>
+                    <td width="50%" style="padding-left: 8px;">
+                      <div class="card">
+                        <h3 class="title">Payment Breakup</h3>
+                        <table class="grid">
+                          <tr><td>Full Amount:</td><td><strong>${full_amount}</strong></td></tr>
+                          <tr><td>Discount:</td><td><strong>${discount}</strong></td></tr>
+                          <tr><td>Coupon:</td><td><strong>${coupon}</strong></td></tr>
+                          <tr><td>Total Amount:</td><td><strong>${totalPrice}</strong></td></tr>
+                          <tr><td>Advance Amount:</td><td><strong>${advancePayable}</strong></td></tr>
+                          <tr><td>Remaining Amount:</td><td><strong>${remainingAmount}</strong></td></tr>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+                <div class="divider"></div>
+                <p><strong>Booking Cancellation Policy:</strong> From >${BookingDate},100% penalty will be charged. In case of no show : no refund.Booking cannot be cancelled/modified on or after the booking date and time mentioned in the Camping Confirmation Voucher. All time mentioned above is in destination time.</p>
+                <div class="divider"></div>
+                <p><strong>Note</strong></p>
+                <p>If your contact details have changed, please notify us so that the same can be updated in our records.</p>
+                <p style="margin-top: 8px;">If the booking is cancelled or changed by guest at a later stage, you will be notified and this confirmation email & Nirwana Stays Booking ID will be null and void.</p>
+              </td>
+            </tr>
+            <tr>
+              <td class="section">
+                <h3 class="title">${accommodationName} Contact Info</h3>
+                <div class="card">
+                  <p><strong>${accommodationName}</strong></p>
+                  <p>At- ${accommodationAddress}</p>
+                  <p>pawna lake</p>
+                  <p><a class="link" href="http://maps.google.com/maps?q=${latitude},${longitude}">Google Maps Link</a></p>
+                  <div class="divider"></div>
+                  <p><strong>Email - </strong><a class="link" href="mailto:${owner_email}">${owner_email}</a></p>
+                  <p><strong>Contact Number - </strong>Tushar Thakar - 9175106307</p>
+                </div>
+                <div class="divider"></div>
+                <p><strong>Note</strong> - Please do not reply to this email. It has been sent from an email account that is not monitored. To ensure that you receive communication related to your booking from Nirwana Stays , please add <a class="link" href="mailto:bookings@arnastays.com"><strong>bookings@arnastays.com</strong></a> to your contact list and address book.</p>
+                <div class="divider"></div>
+                <h3 class="title">Things to Carry</h3>
+                <p>• Always good to carry extra pair of clothes<br />
+                  • Winter and warm clothes as it will be cold night<br />
+                  • Toothbrush and paste (toiletries)<br />
+                  • Any other things you feel necessary<br />
+                  • Personal medicine if any</p>
+              </td>
+            </tr>
+            <tr>
+              <td class="footer">
+                Team ${accommodationName} | Thank you for choosing us.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+<\/html>`;
     const container = document.createElement('div');
-  container.innerHTML = html;
+    container.innerHTML = html;
 
-  container.style.position = 'absolute';
-  container.style.top = '-9999px';
-  container.style.left = '-9999px';
-  container.style.width = '794px'; // A4 width in pixels at 96 DPI
-  container.style.background = 'white';
-  container.style.padding = '0';
-  container.style.margin = '0';
+    container.style.position = 'absolute';
+    container.style.top = '-9999px';
+    container.style.left = '-9999px';
+    container.style.width = '794px'; // A4 width in pixels at 96 DPI
+    container.style.background = 'white';
+    container.style.padding = '0';
+    container.style.margin = '0';
 
-  document.body.appendChild(container);
+    document.body.appendChild(container);
 
-  html2canvas(container, {
-    scale: 2,
-    useCORS: true
-  }).then((canvas) => {
-    const imgData = canvas.toDataURL('image/png');
+    html2canvas(container, {
+      scale: 2,
+      useCORS: true
+    }).then((canvas) => {
+      const imgData = canvas.toDataURL('image/png');
 
-    // Use image size to create a custom-height PDF
-    const imgWidth = canvas.width;
-    const imgHeight = canvas.height;
+      // Use image size to create a custom-height PDF
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
 
-    const pdfWidth = 595.28; // A4 width in pt
-    const pdfHeight = (imgHeight * pdfWidth) / imgWidth; // dynamic height
+      const pdfWidth = 595.28; // A4 width in pt
+      const pdfHeight = (imgHeight * pdfWidth) / imgWidth; // dynamic height
 
-    const pdf = new jsPDF('p', 'pt', [pdfWidth, pdfHeight]);
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`Booking-${BookingId}.pdf`);
+      const pdf = new jsPDF('p', 'pt', [pdfWidth, pdfHeight]);
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Booking-${BookingId}.pdf`);
 
-    document.body.removeChild(container);
-  }).catch((error) => {
-    console.error("PDF generation failed:", error);
-    document.body.removeChild(container);
-  });
+      document.body.removeChild(container);
+    }).catch((error) => {
+      console.error("PDF generation failed:", error);
+      document.body.removeChild(container);
+    });
   }
   useEffect(() => {
     if (formData.accommodation_id) {
@@ -1276,7 +1393,7 @@ const CreateBooking: React.FC = () => {
         guest_name: formData.guest_name,
         guest_email: formData.guest_email,
         guest_phone: formData.guest_phone || null,
-        accommodation_id: parseInt(formData.accommodation_id),
+        accommodation_id: formData.accommodation_id,
         check_in: formData.check_in,
         check_out: formData.check_out,
         adults,
@@ -1285,27 +1402,14 @@ const CreateBooking: React.FC = () => {
         food_veg,
         food_nonveg,
         food_jain,
-        coupon : formData.coupon_code,
-	      discount : parseFloat(formData.total_amount || '0') - parseFloat(formData.discounted_amount || '0'),
-	      full_amount : parseFloat(formData.total_amount),
+        coupon: formData.coupon_code,
+        discount: parseFloat(formData.total_amount || '0') - parseFloat(formData.discounted_amount || '0'),
+        full_amount: parseFloat(formData.total_amount),
         total_amount: parseFloat(formData.discounted_amount || formData.total_amount),
         advance_amount: parseFloat(formData.advance_amount || '0'),
       };
       console.log(bookingPayload);
-      const response = await fetch(`${_BASE_URL}/admin/bookings/offline`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(bookingPayload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create booking');
-      }
-
-      const result = await response.json();
+      const { data: result } = await api.post('/bookings/offline', bookingPayload);
       downloadPdf(
         bookingPayload.guest_email,
         bookingPayload.guest_name,

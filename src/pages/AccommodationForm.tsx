@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { ArrowLeft, Building2, Plus, X, Save, Trash2, Loader2, MapPin, Users, Package } from 'lucide-react';
-
-const admin_BASE_URL = 'https://api.nirwanastays.com';
+import { ArrowLeft, Building2, Plus, X, Save, Trash2, Loader2, MapPin } from 'lucide-react';
+import { api } from '../lib/apiClient';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Accommodation {
   id?: number;
@@ -18,28 +16,41 @@ interface Accommodation {
   rooms: number;
   price: number;
   features: string[];
+  rules: string[];
   images: string[];
+  video?: string;
   available: boolean;
+  subcategory?: string;
   ownerId?: number;
   cityId?: number;
   address?: string;
   latitude?: number;
   longitude?: number;
-  amenityIds?: number[];
-  packageName?: string;
-  packageDescription?: string;
-  packageImages?: string[];
-  adultPrice?: number;
-  childPrice?: number;
-  maxGuests?: number;
+  amenityIds?: string[];
+  /** Hotel manager (admin assigns); managers get this set automatically on create */
+  managerId?: string;
 
   // Villa-specific fields
   maxPersonsVilla?: number;
   extraPersonRate?: number;
 }
 
+interface RoomTypeData {
+  id?: string;
+  name: string;
+  type?: string;
+  subType?: string;
+  price: number;
+  adultRate: number;
+  childRate: number;
+  capacity: { adults: number; children: number };
+  amenities: string[];
+  inventory: number;
+  images: string[];
+}
+
 interface User {
-  id: number;
+  id: number | string;
   name: string;
   email: string;
 }
@@ -51,7 +62,7 @@ interface City {
 }
 
 interface Amenity {
-  id: number;
+  id: string;
   name: string;
   icon: string;
 }
@@ -59,118 +70,141 @@ interface Amenity {
 const AccommodationForm: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const isEditing = id !== undefined;
 
   const [formData, setFormData] = useState<Accommodation>({
     name: '',
     description: '',
-    type: '',
+    type: 'Hotel',
     capacity: 2,
     rooms: 1,
     price: 0,
     features: [],
+    rules: [],
     images: [],
+    video: '',
     available: true,
+    subcategory: '',
     ownerId: undefined,
     cityId: undefined,
     address: '',
     latitude: undefined,
     longitude: undefined,
     amenityIds: [],
-    packageName: '',
-    packageDescription: '',
-    packageImages: [],
-    adultPrice: 0,
-    childPrice: 0,
-    maxGuests: 2,
+    managerId: '',
 
     // Villa defaults
     maxPersonsVilla: 0,
     extraPersonRate: 0,
   });
 
+  const [rooms, setRooms] = useState<RoomTypeData[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]); // NEW: Store new image files
-  const [amenities, setAmenities] = useState<Amenity[]>([
-    { id: 1, name: 'WiFi', icon: 'wifi' },
-    { id: 2, name: 'Swimming Pool', icon: 'flame' },
-    { id: 3, name: 'Music System', icon: 'music' },
-    { id: 4, name: 'Dinner', icon: 'utensils' },
-    { id: 5, name: 'Bonfire', icon: 'flame' },
-    { id: 6, name: 'BBQ', icon: 'coffee' },
-  ]);
+  const [amenities, setAmenities] = useState<Amenity[]>([]);
   const [newFeature, setNewFeature] = useState('');
+  const [newRule, setNewRule] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [existingImages, setExistingImages] = useState<string[]>([]); // NEW: Track existing images
+  const [roomNewImageFiles, setRoomNewImageFiles] = useState<{ [index: number]: File[] }>({});
+  const [managers, setManagers] = useState<{ id: string; name: string; email: string }[]>([]);
 
   useEffect(() => {
     if (isEditing && id) {
       fetchAccommodation(id);
     }
-    
-    // Fetch users and cities on component mount
+
+    // Fetch users, cities, and amenities on component mount
     const fetchData = async () => {
       try {
-        const [usersRes, citiesRes] = await Promise.all([
-          axios.get(`${admin_BASE_URL}/admin/properties/users`),
-          axios.get(`${admin_BASE_URL}/admin/properties/cities`)
+        const [usersRes, citiesRes, amenitiesRes] = await Promise.all([
+          api.get('/admin/properties/users'),
+          api.get('/admin/properties/cities'),
+          api.get('/amenities').catch(() => ({ data: [] })),
         ]);
-        
+
         setUsers(usersRes.data);
         setCities(citiesRes.data);
+        const amenityList = Array.isArray(amenitiesRes.data) ? amenitiesRes.data : (amenitiesRes.data as any)?.data || [];
+        setAmenities(amenityList.map((a: any) => ({
+          id: String(a.id ?? a._id),
+          name: a.name || '',
+          icon: a.icon || 'wifi',
+        })));
+
+        if (authUser?.role === 'admin') {
+          const allUsers = (await api.get('/admin/users')).data as { id: string; name: string; email: string; role: string }[];
+          setManagers(allUsers.filter((u) => u.role === 'manager'));
+        } else {
+          setManagers([]);
+        }
       } catch (error) {
         console.error('Error fetching initial data:', error);
         toast.error('Failed to load initial data');
       }
     };
-    
+
     fetchData();
-  }, [isEditing, id]);
+  }, [isEditing, id, authUser?.role]);
 
   const fetchAccommodation = async (accommodationId: string) => {
     setFetching(true);
     try {
-      const response = await axios.get(
-        `${admin_BASE_URL}/admin/properties/accommodations/${accommodationId}`
-      );
-      
-      const data = response.data;
-      
-      // NEW: Store existing images separately
-      setExistingImages(data.basicInfo?.images || []);
-      setFormData({
-        id: data.id,
-        name: data.basicInfo?.name || '',
-        description: data.basicInfo?.description || '',
-        type: data.basicInfo?.type || '',
-        capacity: data.basicInfo?.capacity || 2,
-        rooms: data.basicInfo?.rooms || 1,
-        price: parseFloat(data.basicInfo?.price || '0') || 0,
-        features: data.basicInfo?.features || [],
-        images: data.basicInfo?.images || [],
-        available: data.basicInfo?.available !== undefined ? data.basicInfo.available : true,
-        ownerId: data.location?.owner?.id,
-        cityId: data.location?.city?.id,
-        address: data.location?.address || '',
-        latitude: data.location?.coordinates?.latitude || undefined,
-        longitude: data.location?.coordinates?.longitude || undefined,
-        amenityIds: data.amenities?.ids || [],
-        packageName: data.packages?.name || '',
-        packageDescription: data.packages?.description || '',
-        packageImages: data.packages?.images || [],
-        adultPrice: parseFloat(data.packages?.pricing?.adult || '0') || 0,
-        childPrice: parseFloat(data.packages?.pricing?.child || '0') || 0,
-        maxGuests: data.packages?.pricing?.maxGuests || 2,
+      const { data } = await api.get(`/admin/properties/accommodations/${accommodationId}`);
 
-        // Map villa fields if present in basicInfo
-        maxPersonsVilla: data.basicInfo?.maxPersonsVilla || 0,
-        extraPersonRate: data.basicInfo?.extraPersonRate || 0,
+      // Support old structure (basicInfo) and new structure (propertyData)
+      const propData = data.propertyData || data.basicInfo || {};
+      const locData = data.propertyData ? { address: data.propertyData.location } : data.location || {};
+
+      setExistingImages(propData.images || []);
+      setFormData({
+        id: data.propertyData ? data.propertyData.id : data.id,
+        name: propData.name || '',
+        description: propData.description || '',
+        type: propData.type || 'Hotel',
+        capacity: propData.capacity || 2,
+        rooms: propData.rooms || propData.inventory || 1,
+        price: parseFloat(propData.price || '0') || 0,
+        features: propData.features || propData.amenities || [],
+        rules: propData.rules || [],
+        images: propData.images || [],
+        video: propData.video || '',
+        available: propData.available !== undefined ? propData.available : true,
+        ownerId: locData.owner?.id,
+        cityId: locData.city?.id,
+        address: locData.address || '',
+        latitude: locData.coordinates?.latitude || undefined,
+        longitude: locData.coordinates?.longitude || undefined,
+        amenityIds: (data.amenities?.ids || []).map((id: any) => String(id)),
+        subcategory: propData.subcategory || '',
+        maxPersonsVilla: propData.maxPersonsVilla || 0,
+        extraPersonRate: propData.extraPersonRate || 0,
+        managerId: propData.managerId
+          ? String((propData.managerId as any)?._id ?? propData.managerId)
+          : '',
       });
+
+      if (data.roomsData && Array.isArray(data.roomsData)) {
+        setRooms(data.roomsData.map((r: any) => ({
+          id: r._id,
+          name: r.name || '',
+          type: r.type || 'Standard',
+          subType: r.subType || '',
+          price: r.price || 0,
+          adultRate: r.adultRate || 0,
+          childRate: r.childRate || 0,
+          capacity: r.capacity || { adults: 2, children: 0 },
+          amenities: r.amenities || [],
+          inventory: r.inventory || 1,
+          images: r.images || []
+        })));
+      }
     } catch (error) {
       console.error('Error fetching accommodation:', error);
       setSubmitError('Failed to load accommodation data');
@@ -187,9 +221,8 @@ const AccommodationForm: React.FC = () => {
         ...formData,
         [name]: (e.target as HTMLInputElement).checked,
       });
-    } else if (name === 'price' || name === 'capacity' || name === 'rooms' || 
-               name === 'latitude' || name === 'longitude' || name === 'adultPrice' || 
-               name === 'childPrice' || name === 'maxGuests' || name === 'maxPersonsVilla' || name === 'extraPersonRate') {
+    } else if (name === 'price' || name === 'capacity' || name === 'rooms' ||
+      name === 'latitude' || name === 'longitude' || name === 'maxPersonsVilla' || name === 'extraPersonRate') {
       setFormData({
         ...formData,
         [name]: value === '' ? 0 : Number(value),
@@ -198,6 +231,11 @@ const AccommodationForm: React.FC = () => {
       setFormData({
         ...formData,
         [name]: value === '' ? undefined : Number(value),
+      });
+    } else if (name === 'managerId') {
+      setFormData({
+        ...formData,
+        managerId: value,
       });
     } else {
       setFormData({
@@ -214,7 +252,7 @@ const AccommodationForm: React.FC = () => {
     }
   };
 
-  const handleAmenityChange = (amenityId: number) => {
+  const handleAmenityChange = (amenityId: string) => {
     const amenity = amenities.find(a => a.id === amenityId);
     if (!amenity) return;
 
@@ -263,6 +301,24 @@ const AccommodationForm: React.FC = () => {
     }
   };
 
+  const addRule = () => {
+    const trimmedRule = newRule.trim();
+    if (trimmedRule && !formData.rules.includes(trimmedRule)) {
+      setFormData({
+        ...formData,
+        rules: [...formData.rules, trimmedRule],
+      });
+      setNewRule('');
+    }
+  };
+
+  const removeRule = (rule: string) => {
+    setFormData({
+      ...formData,
+      rules: formData.rules.filter(r => r !== rule),
+    });
+  };
+
   // NEW: Function to handle image removal
   const removeImage = (image: string) => {
     // If it's an existing image, just remove from formData
@@ -271,22 +327,98 @@ const AccommodationForm: React.FC = () => {
         ...formData,
         images: formData.images.filter(img => img !== image),
       });
-    } 
+    }
     // If it's a new image (file), remove from both formData and newImageFiles
     else {
       // Find the index of the image in newImageFiles
       const index = formData.images.indexOf(image);
-      
+
       setFormData({
         ...formData,
         images: formData.images.filter(img => img !== image),
       });
-      
+
       // Remove the corresponding file
       setNewImageFiles(prevFiles => {
         const newFiles = [...prevFiles];
         newFiles.splice(index, 1);
         return newFiles;
+      });
+    }
+  };
+
+  const addRoom = () => {
+    setRooms([...rooms, {
+      name: '', type: 'Standard', subType: '', price: 0, adultRate: 0, childRate: 0, capacity: { adults: 2, children: 0 }, amenities: [], inventory: 1, images: []
+    }]);
+  };
+
+  const removeRoom = (index: number) => {
+    const newRooms = [...rooms];
+    newRooms.splice(index, 1);
+    setRooms(newRooms);
+  };
+
+  const handleRoomChange = (index: number, field: string, value: any) => {
+    const newRooms = [...rooms];
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      (newRooms[index] as any)[parent][child] = value;
+    } else {
+      (newRooms[index] as any)[field] = value;
+    }
+    setRooms(newRooms);
+  };
+
+  const handleRoomAmenityAdd = (index: number, amenityName: string) => {
+    if (!amenityName) return;
+    const newRooms = [...rooms];
+    if (!newRooms[index].amenities.includes(amenityName)) {
+      newRooms[index].amenities.push(amenityName);
+    }
+    setRooms(newRooms);
+  };
+
+  const handleRoomAmenityRemove = (index: number, amenityName: string) => {
+    const newRooms = [...rooms];
+    newRooms[index].amenities = newRooms[index].amenities.filter(a => a !== amenityName);
+    setRooms(newRooms);
+  };
+
+  const handleRoomImageFileChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newFiles = Array.from(files);
+    setRoomNewImageFiles(prev => ({
+      ...prev,
+      [index]: [...(prev[index] || []), ...newFiles]
+    }));
+
+    const previewUrls = newFiles.map(file => URL.createObjectURL(file));
+    const newRooms = [...rooms];
+    newRooms[index].images = [...(newRooms[index].images || []), ...previewUrls];
+    setRooms(newRooms);
+  };
+
+  const removeRoomImage = (roomIndex: number, image: string) => {
+    const newRooms = [...rooms];
+    const imageIndex = newRooms[roomIndex].images.indexOf(image);
+
+    newRooms[roomIndex].images = newRooms[roomIndex].images.filter(img => img !== image);
+    setRooms(newRooms);
+
+    // If it is a newly added file (exists in roomNewImageFiles)
+    if (image.startsWith('blob:')) {
+      setRoomNewImageFiles(prev => {
+        const roomFiles = [...(prev[roomIndex] || [])];
+        // Note: Blob URLs match files by addition order loosely, we assume the user removes the exact blob in preview array. 
+        // For simplicity we drop it if we can find it by index roughly, or we just keep it and cleanup on upload filter. 
+        // To be accurate, we'll try to slice out the corresponding index.
+        const blobCount = newRooms[roomIndex].images.filter(img => img.startsWith('blob:')).length;
+        // Approximation: remove the last file if we can't pinpoint.
+        roomFiles.splice(imageIndex - (newRooms[roomIndex].images.length - blobCount), 1);
+        return { ...prev, [roomIndex]: roomFiles };
       });
     }
   };
@@ -300,20 +432,8 @@ const AccommodationForm: React.FC = () => {
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
     }
-    if (!formData.type) {
-      newErrors.type = 'Type is required';
-    }
     if (formData.price <= 0) {
       newErrors.price = 'Price must be greater than 0';
-    }
-    if (formData.capacity <= 0) {
-      newErrors.capacity = 'Capacity must be greater than 0';
-    }
-    if (formData.rooms <= 0) {
-      newErrors.rooms = 'Rooms must be greater than 0';
-    }
-    if (formData.packageName && !formData.packageDescription) {
-      newErrors.packageDescription = 'Package description is required';
     }
 
     // Villa-specific validation (only if type === 'Villa')
@@ -336,10 +456,11 @@ const AccommodationForm: React.FC = () => {
     }
 
     setLoading(true);
+    setUploading(true);
 
     try {
       // Upload new images first
-      const uploadedImageUrls = await uploadNewImages();
+      const uploadedImageUrls = await uploadImages(newImageFiles);
 
       // Combine existing images with new uploaded URLs
       const allImages = [
@@ -347,57 +468,52 @@ const AccommodationForm: React.FC = () => {
         ...uploadedImageUrls
       ];
 
-      const url = isEditing
-        ? `${admin_BASE_URL}/admin/properties/accommodations/${id}`
-        : `${admin_BASE_URL}/admin/properties/accommodations`;
+      // Upload room images
+      const updatedRooms = [...rooms];
+      for (let i = 0; i < updatedRooms.length; i++) {
+        const rFiles = roomNewImageFiles[i] || [];
+        if (rFiles.length > 0) {
+          const uploadedRoomUrls = await uploadImages(rFiles);
+          updatedRooms[i].images = [...(updatedRooms[i].images.filter(img => !img.startsWith('blob:'))), ...uploadedRoomUrls];
+        }
+      }
 
       const requestData: any = {
-        id: formData.id,
-        basicInfo: {
+        propertyData: {
           name: formData.name,
+          // Public website filters off this `type` field.
+          type: formData.type || 'Hotel',
           description: formData.description,
-          type: formData.type,
-          capacity: formData.capacity,
-          rooms: formData.rooms,
+          location: formData.address || 'Unknown Location',
+          address: formData.address,
           price: formData.price,
-          features: formData.features,
-          images: allImages, // Use the combined image array
+          amenities: formData.features,
+          rules: formData.rules,
+          images: allImages,
+          video: formData.video,
+          capacity: formData.capacity,
+          inventory: formData.rooms,
           available: formData.available,
-
-          // Villa fields inside basicInfo (if villa selected)
+          subcategory: formData.subcategory,
           ...(formData.type === 'Villa' ? {
             MaxPersonVilla: formData.maxPersonsVilla,
             RatePersonVilla: formData.extraPersonRate
-          } : {})
+          } : {}),
+          ...(authUser?.role === 'admin'
+            ? {
+                managerId: formData.managerId && formData.managerId.trim() !== ''
+                  ? formData.managerId
+                  : null,
+              }
+            : {}),
         },
-        location: {
-          address: formData.address,
-          cityId: formData.cityId,
-          coordinates: {
-            latitude: formData.latitude,
-            longitude: formData.longitude
-          }
-        },
-        amenities: {
-          ids: formData.amenityIds || []
-        },
-        ownerId: formData.ownerId,
-        packages: {
-          name: formData.packageName || formData.name,
-          description: formData.packageDescription,
-          images: formData.packageImages || [],
-          pricing: {
-            adult: formData.adultPrice,
-            child: formData.childPrice,
-            maxGuests: formData.maxGuests
-          }
-        }
+        roomsData: updatedRooms
       };
 
       if (isEditing) {
-        await axios.put(url, requestData);
+        await api.put(`/admin/properties/accommodations/${id}`, requestData);
       } else {
-        await axios.post(url, requestData);
+        await api.post('/admin/properties/accommodations', requestData);
       }
 
       toast.success(`Accommodation ${isEditing ? 'updated' : 'created'} successfully!`);
@@ -409,35 +525,33 @@ const AccommodationForm: React.FC = () => {
       toast.error(errorMessage);
     } finally {
       setLoading(false);
+      setUploading(false);
     }
   };
 
-  // NEW: Upload new image files and return their URLs
-  const uploadNewImages = async (): Promise<string[]> => {
-    if (newImageFiles.length === 0) return [];
+  // NEW: Upload generic image files and return their URLs
+  const uploadImages = async (files: File[]): Promise<string[]> => {
+    if (files.length === 0) return [];
 
-    setUploading(true);
     const uploadedUrls: string[] = [];
-    
+
     try {
-      for (const file of newImageFiles) {
+      for (const file of files) {
         const formDataFile = new FormData();
-        formDataFile.append('image', file);
-        
+        formDataFile.append('file', file);
+
         const res = await axios.post(
-          'https://plumeriaretreat.com/upload.php',
+          'https://oraastay.com/upload_hotels_data.php',
           formDataFile,
           {
-            headers: { 
+            headers: {
               'Content-Type': 'multipart/form-data',
             },
           }
         );
         console.log('Upload response:', res.data);
-        if (res.data.success && res.data.filename) {
-          uploadedUrls.push(
-            res.data.url
-          );
+        if (res.data.success && res.data.file_url) {
+          uploadedUrls.push(res.data.file_url);
         }
       }
       return uploadedUrls;
@@ -445,8 +559,6 @@ const AccommodationForm: React.FC = () => {
       console.error('Image upload error:', error);
       toast.error('Failed to upload some images');
       return [];
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -454,14 +566,14 @@ const AccommodationForm: React.FC = () => {
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    
+
     // Store files for later upload
     const newFiles = Array.from(files);
     setNewImageFiles(prev => [...prev, ...newFiles]);
-    
+
     // Create preview URLs
     const previewUrls = newFiles.map(file => URL.createObjectURL(file));
-    
+
     // Add preview URLs to form data
     setFormData({
       ...formData,
@@ -473,7 +585,7 @@ const AccommodationForm: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="flex items-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500 mr-3" />
+          <Loader2 className="h-8 w-8 animate-spin text-blue-700 mr-3" />
           <span className="text-lg text-gray-600">Loading accommodation...</span>
         </div>
       </div>
@@ -537,7 +649,7 @@ const AccommodationForm: React.FC = () => {
                     id="name"
                     value={formData.name}
                     onChange={handleChange}
-                    className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.name ? 'border-red-300' : 'border-gray-300'
+                    className={`shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md ${errors.name ? 'border-red-300' : 'border-gray-300'
                       }`}
                   />
                   {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
@@ -546,32 +658,71 @@ const AccommodationForm: React.FC = () => {
 
               <div className="sm:col-span-2">
                 <label htmlFor="type" className="block text-sm font-medium text-gray-700">
-                  Type *
+                  Property Type *
                 </label>
                 <div className="mt-1">
                   <select
                     id="type"
                     name="type"
-                    value={formData.type}
+                    value={formData.type || 'Hotel'}
                     onChange={handleChange}
-                    className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm rounded-md ${errors.type ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                   >
-                    <option value="">Select Type</option>
-                    {!['Villa', 'Suite', 'Cottage', 'Bungalow', 'Glamping', 'Standard', 'Deluxe'].includes(formData.type) &&
-                      formData.type && (
-                        <option value={formData.type}>{formData.type}</option>
-                      )}
+                    <option value="Hotel">Hotel</option>
+                    <option value="Resort">Resort</option>
                     <option value="Villa">Villa</option>
-                    <option value="Suite">Suite</option>
                     <option value="Cottage">Cottage</option>
-                    <option value="Bungalow">Bungalow</option>
                     <option value="Glamping">Glamping</option>
-                    <option value="Standard">Standard Room</option>
-                    <option value="Deluxe">Deluxe Room</option>
                     <option value="Camping">Camping</option>
+                    <option value="Bungalow">Bungalow</option>
+                    <option value="Apartment">Apartment</option>
+                    <option value="Homestay">Homestay</option>
+                    <option value="Farmhouse">Farmhouse</option>
                   </select>
-                  {errors.type && <p className="mt-1 text-sm text-red-600">{errors.type}</p>}
+                </div>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label htmlFor="price" className="block text-sm font-medium text-gray-700">
+                  Starting Price per night per person (₹) *
+                </label>
+                <div className="mt-1">
+                  <input
+                    type="number"
+                    name="price"
+                    id="price"
+                    min="0"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={handleChange}
+                    className={`shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md ${errors.price ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                  />
+                  {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
+                </div>
+              </div>
+
+              <div className="sm:col-span-3">
+                <label htmlFor="subcategory" className="block text-sm font-medium text-gray-700">
+                  Subcategory
+                </label>
+                <div className="mt-1">
+                  <select
+                    id="subcategory"
+                    name="subcategory"
+                    value={formData.subcategory || ''}
+                    onChange={handleChange}
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
+                  >
+                    <option value="">Select Subcategory</option>
+                    <option value="Luxury Resorts">Luxury Resorts</option>
+                    <option value="Budget Hotels">Budget Hotels</option>
+                    <option value="Family Hotels">Family Hotels</option>
+                    <option value="Hotels Near Venna Lake">Hotels Near Venna Lake</option>
+                    <option value="Hotels Near Arthur's Seat">Hotels Near Arthur's Seat</option>
+                    <option value="Panchgani Hotels">Panchgani Hotels</option>
+                    <option value="Bhilar Resorts">Bhilar Resorts</option>
+                  </select>
                 </div>
               </div>
 
@@ -586,10 +737,27 @@ const AccommodationForm: React.FC = () => {
                     rows={3}
                     value={formData.description}
                     onChange={handleChange}
-                    className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.description ? 'border-red-300' : 'border-gray-300'
+                    className={`shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md ${errors.description ? 'border-red-300' : 'border-gray-300'
                       }`}
                   />
                   {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
+                </div>
+              </div>
+
+              <div className="sm:col-span-6">
+                <label htmlFor="video" className="block text-sm font-medium text-gray-700">
+                  Video URL
+                </label>
+                <div className="mt-1">
+                  <input
+                    type="text"
+                    name="video"
+                    id="video"
+                    value={formData.video || ''}
+                    onChange={handleChange}
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
+                    placeholder="Enter YouTube, Vimeo, or MP4 URL"
+                  />
                 </div>
               </div>
 
@@ -603,11 +771,11 @@ const AccommodationForm: React.FC = () => {
                     name="ownerId"
                     value={formData.ownerId || ''}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                   >
                     <option value="">Select Owner</option>
                     {users.map(user => (
-                      <option key={user.id} value={user.id}>
+                      <option key={String(user.id)} value={user.id}>
                         {user.name} ({user.email})
                       </option>
                     ))}
@@ -615,63 +783,32 @@ const AccommodationForm: React.FC = () => {
                 </div>
               </div>
 
-              <div className="sm:col-span-1">
-                <label htmlFor="capacity" className="block text-sm font-medium text-gray-700">
-                  Capacity *
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="number"
-                    name="capacity"
-                    id="capacity"
-                    min="1"
-                    value={formData.capacity}
-                    onChange={handleChange}
-                    className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.capacity ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                  />
-                  {errors.capacity && <p className="mt-1 text-sm text-red-600">{errors.capacity}</p>}
+              {authUser?.role === 'admin' && (
+                <div className="sm:col-span-3">
+                  <label htmlFor="managerId" className="block text-sm font-medium text-gray-700">
+                    Assigned manager
+                  </label>
+                  <div className="mt-1">
+                    <select
+                      id="managerId"
+                      name="managerId"
+                      value={formData.managerId || ''}
+                      onChange={handleChange}
+                      className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
+                    >
+                      <option value="">No manager</option>
+                      {managers.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} ({m.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">Managers only see hotels assigned to them.</p>
                 </div>
-              </div>
+              )}
 
-              <div className="sm:col-span-1">
-                <label htmlFor="rooms" className="block text-sm font-medium text-gray-700">
-                  Rooms *
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="number"
-                    name="rooms"
-                    id="rooms"
-                    min="1"
-                    value={formData.rooms}
-                    onChange={handleChange}
-                    className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.rooms ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                  />
-                  {errors.rooms && <p className="mt-1 text-sm text-red-600">{errors.rooms}</p>}
-                </div>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                  Price per night per person (₹) *
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="number"
-                    name="price"
-                    id="price"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={handleChange}
-                    className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.price ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                  />
-                  {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
-                </div>
-              </div>
+              {/* Capacity and Rooms removed from property level */}
 
               <div className="sm:col-span-6">
                 <div className="flex items-center">
@@ -681,7 +818,7 @@ const AccommodationForm: React.FC = () => {
                     type="checkbox"
                     checked={formData.available}
                     onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-blue-700 focus:ring-blue-600 border-gray-300 rounded"
                   />
                   <label htmlFor="available" className="ml-2 block text-sm text-gray-700">
                     Available for booking
@@ -704,7 +841,7 @@ const AccommodationForm: React.FC = () => {
                         min={1}
                         value={formData.maxPersonsVilla}
                         onChange={handleChange}
-                        className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.maxPersonsVilla ? 'border-red-300' : 'border-gray-300'}`}
+                        className={`shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md ${errors.maxPersonsVilla ? 'border-red-300' : 'border-gray-300'}`}
                       />
                       {errors.maxPersonsVilla && <p className="mt-1 text-sm text-red-600">{errors.maxPersonsVilla}</p>}
                     </div>
@@ -722,7 +859,7 @@ const AccommodationForm: React.FC = () => {
                         min={0}
                         value={formData.extraPersonRate}
                         onChange={handleChange}
-                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                        className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                       />
                     </div>
                   </div>
@@ -750,7 +887,7 @@ const AccommodationForm: React.FC = () => {
                     name="cityId"
                     value={formData.cityId || ''}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                   >
                     <option value="">Select City</option>
                     {cities.map(city => (
@@ -773,7 +910,7 @@ const AccommodationForm: React.FC = () => {
                     rows={2}
                     value={formData.address}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                     placeholder="Enter full address"
                   />
                 </div>
@@ -791,7 +928,7 @@ const AccommodationForm: React.FC = () => {
                     step="any"
                     value={formData.latitude || ''}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                     placeholder="e.g., 18.5204"
                   />
                 </div>
@@ -809,7 +946,7 @@ const AccommodationForm: React.FC = () => {
                     step="any"
                     value={formData.longitude || ''}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                     placeholder="e.g., 73.8567"
                   />
                 </div>
@@ -860,7 +997,7 @@ const AccommodationForm: React.FC = () => {
                 <button
                   type="button"
                   onClick={addFeature}
-                  className="inline-flex items-center px-4 py-2 border border-transparent border-l-0 shadow-sm text-sm font-medium rounded-none rounded-r-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex items-center px-4 py-2 border border-transparent border-l-0 shadow-sm text-sm font-medium rounded-none rounded-r-md text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
@@ -873,7 +1010,7 @@ const AccommodationForm: React.FC = () => {
               <select
                 className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md mb-2"
                 onChange={e => {
-                  const amenityId = Number(e.target.value);
+                  const amenityId = e.target.value;
                   if (amenityId && !formData.amenityIds?.includes(amenityId)) {
                     handleAmenityChange(amenityId);
                   }
@@ -912,110 +1049,284 @@ const AccommodationForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Package Details */}
+        {/* Rules */}
         <div className="bg-white shadow rounded-lg overflow-hidden">
           <div className="p-6 space-y-6">
-            <div className="flex items-center mb-4">
-              <Package className="h-5 w-5 text-blue-600 mr-2" />
-              <h2 className="text-lg font-medium text-gray-900">Package Details</h2>
-            </div>
-            <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-              <div className="sm:col-span-3">
-                <label htmlFor="packageName" className="block text-sm font-medium text-gray-700">
-                  Package Name
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="text"
-                    name="packageName"
-                    id="packageName"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    placeholder="e.g., Weekend Getaway Package"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-3">
-                <label htmlFor="maxGuests" className="block text-sm font-medium text-gray-700">
-                  No. of Guests
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="number"
-                    name="maxGuests"
-                    id="maxGuests"
-                    min="1"
-                    value={formData.maxGuests}
-                    onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-6">
-                <label htmlFor="packageDescription" className="block text-sm font-medium text-gray-700">
-                  Package Description
-                </label>
-                <div className="mt-1">
-                  <ReactQuill
-                    theme="snow"
-                    value={formData.packageDescription}
-                    onChange={(value) => {
-                      setFormData({ ...formData, packageDescription: value });
-                      if (errors.packageDescription) {
-                        setErrors({ ...errors, packageDescription: '' });
-                      }
-                    }}
-                  />
-                  {errors.packageDescription && <p className="mt-1 text-sm text-red-600">{errors.packageDescription}</p>}
-                </div>
-              </div>
-
-              <div className="sm:col-span-3">
-                <label htmlFor="adultPrice" className="block text-sm font-medium text-gray-700">
-                  Adult Price (₹)
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="number"
-                    name="adultPrice"
-                    id="adultPrice"
-                    min="0"
-                    step="0.01"
-                    value={formData.adultPrice}
-                    onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-              </div>
-
-              {formData.type !== 'Villa' && (
-                <div className="sm:col-span-3">
-                  <label htmlFor="childPrice" className="block text-sm font-medium text-gray-700">
-                    Child Price (₹)
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      type="number"
-                      name="childPrice"
-                      id="childPrice"
-                      min="0"
-                      step="0.01"
-                      value={formData.childPrice}
-                      onChange={handleChange}
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    />
+            <h2 className="text-lg font-medium text-gray-900 border-b pb-2">Property Rules</h2>
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {formData.rules.map((rule) => (
+                  <div
+                    key={rule}
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800"
+                  >
+                    {rule}
+                    <button
+                      type="button"
+                      onClick={() => removeRule(rule)}
+                      className="ml-1.5 h-4 w-4 rounded-full text-red-400 hover:text-red-600 focus:outline-none"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
-                </div>
-              )}
+                ))}
+              </div>
+              <div className="flex">
+                <input
+                  type="text"
+                  value={newRule}
+                  onChange={(e) => setNewRule(e.target.value)}
+                  placeholder="Add a property rule (e.g., No smoking, Check-in at 2 PM)"
+                  className="shadow-sm focus:ring-red-500 focus:border-red-500 block w-full sm:text-sm border-gray-300 rounded-md rounded-r-none"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addRule();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={addRule}
+                  className="inline-flex items-center px-4 py-2 border border-transparent border-l-0 shadow-sm text-sm font-medium rounded-none rounded-r-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Property Images */}
+        {/* Room Types Details */}
         <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="p-6 space-y-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <Building2 className="h-5 w-5 text-blue-600 mr-2" />
+                <h2 className="text-lg font-medium text-gray-900">Room Types</h2>
+              </div>
+              <button
+                type="button"
+                onClick={addRoom}
+                className="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
+              >
+                <Plus className="h-4 w-4 mr-1" /> Add Room Type
+              </button>
+            </div>
+
+            {rooms.length === 0 ? (
+              <div className="text-sm text-gray-500 text-center py-4">No room types added yet.</div>
+            ) : (
+              <div className="space-y-6">
+                {rooms.map((room, index) => (
+                  <div key={index} className="border border-gray-200 rounded-md p-4 bg-gray-50 relative">
+                    <button
+                      type="button"
+                      onClick={() => removeRoom(index)}
+                      className="absolute top-4 right-4 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+
+                    <div className="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-6 mt-4">
+                      <div className="sm:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700">Room Name</label>
+                        <input
+                          type="text"
+                          value={room.name}
+                          onChange={(e) => handleRoomChange(index, 'name', e.target.value)}
+                          className="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                          placeholder="e.g., Deluxe Ocean View"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700">Type</label>
+                        <select
+                          value={room.type || ''}
+                          onChange={(e) => handleRoomChange(index, 'type', e.target.value)}
+                          className="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                        >
+                          <option value="">Select Type</option>
+                          <option value="Villa">Villa</option>
+                          <option value="Hotel">Hotel</option>
+                          <option value="Suite">Suite</option>
+                          <option value="Cottage">Cottage</option>
+                          <option value="Bungalow">Bungalow</option>
+                          <option value="Glamping">Glamping</option>
+                          <option value="Standard">Standard Room</option>
+                          <option value="Deluxe">Deluxe Room</option>
+                          <option value="Camping">Camping</option>
+                        </select>
+                      </div>
+                      
+                      {/* Evaluate the applicable type for subtypes: check room.type first, fallback to property level formData.type */}
+                      {(() => {
+                        const subtypeCategory = (room.type === 'Villa' || room.type === 'Cottage' || room.type === 'Hotel') ? room.type : 
+                                               (formData.type === 'Villa' || formData.type === 'Cottage' || formData.type === 'Hotel') ? formData.type : null;
+                        
+                        if (!subtypeCategory) return null;
+
+                        return (
+                          <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700">Sub Type</label>
+                            <select
+                              value={room.subType || ''}
+                              onChange={(e) => handleRoomChange(index, 'subType', e.target.value)}
+                              className="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                            >
+                              <option value="">Select Sub Type</option>
+                              {subtypeCategory === 'Villa' && [...Array(8)].map((_, i) => (
+                                <option key={i} value={`${i + 1}BHK`}>{`${i + 1}BHK`}</option>
+                              ))}
+                              {subtypeCategory === 'Cottage' && [...Array(8)].map((_, i) => (
+                                <option key={i} value={`${i + 3} Room Cottage`}>{`${i + 3} Room Cottage`}</option>
+                              ))}
+                              {subtypeCategory === 'Hotel' && [...Array(5)].map((_, i) => (
+                                <option key={i} value={`${i + 1} Bedroom`}>{`${i + 1} Bedroom`}</option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })()}
+
+                      <div className="sm:col-span-1">
+                        <label className="block text-sm font-medium text-gray-700">Base Price (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={room.price}
+                          onChange={(e) => handleRoomChange(index, 'price', Number(e.target.value))}
+                          className="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                        />
+                      </div>
+                      <div className="sm:col-span-1">
+                        <label className="block text-sm font-medium text-gray-700">Adult Rate (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={room.adultRate}
+                          onChange={(e) => handleRoomChange(index, 'adultRate', Number(e.target.value))}
+                          className="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                          placeholder="Per Extra Adult"
+                        />
+                      </div>
+                      <div className="sm:col-span-1">
+                        <label className="block text-sm font-medium text-gray-700">Child Rate (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={room.childRate}
+                          onChange={(e) => handleRoomChange(index, 'childRate', Number(e.target.value))}
+                          className="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                          placeholder="Per Extra Child"
+                        />
+                      </div>
+                      <div className="sm:col-span-1">
+                        <label className="block text-sm font-medium text-gray-700">Inventory</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={room.inventory}
+                          onChange={(e) => handleRoomChange(index, 'inventory', Number(e.target.value))}
+                          className="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block text-sm font-medium text-gray-700">Capacity (Adults)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={room.capacity.adults}
+                          onChange={(e) => handleRoomChange(index, 'capacity.adults', Number(e.target.value))}
+                          className="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block text-sm font-medium text-gray-700">Capacity (Children)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={room.capacity.children}
+                          onChange={(e) => handleRoomChange(index, 'capacity.children', Number(e.target.value))}
+                          className="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                        />
+                      </div>
+                      <div className="sm:col-span-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Room Amenities</label>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <select
+                            className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-64 sm:text-sm border-gray-300 rounded-md"
+                            onChange={e => {
+                              handleRoomAmenityAdd(index, e.target.value);
+                              e.target.value = '';
+                            }}
+                            defaultValue=""
+                          >
+                            <option value="" disabled>Add Room Amenity</option>
+                            <option value="AC">AC</option>
+                            <option value="TV">TV</option>
+                            <option value="Mini-bar">Mini-bar</option>
+                            <option value="Balcony">Balcony</option>
+                            <option value="Bathtub">Bathtub</option>
+                            <option value="Ocean View">Ocean View</option>
+                            <option value="Room Service">Room Service</option>
+                          </select>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {room.amenities.map(amen => (
+                            <div key={amen} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {amen}
+                              <button
+                                type="button"
+                                onClick={() => handleRoomAmenityRemove(index, amen)}
+                                className="ml-1 h-3 w-3 rounded-full text-green-500 hover:text-green-700 focus:outline-none"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Room Images */}
+                      <div className="sm:col-span-6 mt-4 border-t pt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Room Type Images</label>
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={(e) => handleRoomImageFileChange(index, e)}
+                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                          {(room.images || []).map((image, imgIndex) => (
+                            <div key={imgIndex} className="relative group">
+                              <img
+                                src={image}
+                                alt={`Room ${index + 1} Image ${imgIndex + 1}`}
+                                className="w-full h-24 object-cover rounded-lg"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeRoomImage(index, image)}
+                                className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Property Images */}
+        < div className="bg-white shadow rounded-lg overflow-hidden" >
           <div className="p-6 space-y-6">
             <h2 className="text-lg font-medium text-gray-900 border-b pb-2">Property Images</h2>
             <div className="space-y-4">
@@ -1058,20 +1369,20 @@ const AccommodationForm: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div >
 
         {/* Form Actions */}
-        <div className="flex justify-end space-x-3">
+        < div className="flex justify-end space-x-3" >
           <Link
             to="/accommodations"
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={loading || uploading}
-            className="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading || uploading ? (
               <>
@@ -1085,9 +1396,9 @@ const AccommodationForm: React.FC = () => {
               </>
             )}
           </button>
-        </div>
-      </form>
-    </div>
+        </div >
+      </form >
+    </div >
   );
 };
 

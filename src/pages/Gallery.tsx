@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Image, Search, Filter, UploadCloud, XCircle, Trash2, Edit, Eye, AlertCircle, CheckCircle } from 'lucide-react';
+import { api } from '../lib/apiClient';
 
 interface GalleryImage {
   id: string;
@@ -48,7 +49,7 @@ const Gallery = () => {
     alt_text: '',
     description: ''
   });
-  const API_BASE_URL = 'https://api.nirwanastays.com'; // Commented out API URL
+  const GALLERY_UPLOAD_URL = 'https://oraastay.com/upload_gallery.php';
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
 
   const filters = [
@@ -61,80 +62,41 @@ const Gallery = () => {
 
   // Fetch gallery images from backend
   const fetchImages = async () => {
-    // Commented out API call - using mock data
     try {
       setLoading(true);
+      setError('');
       const params = new URLSearchParams();
       if (activeFilter !== 'all') params.append('category', activeFilter);
       if (searchTerm) params.append('search', searchTerm);
 
-      const response = await fetch(`${API_BASE_URL}/admin/gallery?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch images');
-
-      const data: GalleryApiResponse = await response.json();
+      const { data }: { data: GalleryApiResponse } = await api.get('/admin/gallery', {
+        params: Object.fromEntries(params.entries()),
+      });
       setImages(data.images || []);
     } catch (err: any) {
-      setError('Failed to load gallery images');
+      setError(err.message || 'Failed to load gallery images');
+      setImages([]);
       console.error('Error fetching images:', err);
     } finally {
       setLoading(false);
     }
-    
-    // Mock gallery data
-    // setLoading(true);
-    // setTimeout(() => {
-    //   const mockImages: GalleryImage[] = [
-    //     {
-    //       id: '1',
-    //       image_url: 'https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg',
-    //       title: 'Lake View Villa',
-    //       alt_text: 'Beautiful lake view villa',
-    //       description: 'Stunning villa with panoramic lake views',
-    //       category: 'accommodation'
-    //     },
-    //     {
-    //       id: '2',
-    //       image_url: 'https://images.pexels.com/photos/2666598/pexels-photo-2666598.jpeg',
-    //       title: 'Nature Trail',
-    //       alt_text: 'Scenic nature trail',
-    //       description: 'Beautiful hiking trail through the forest',
-    //       category: 'nature'
-    //     }
-    //   ];
-    //   setImages(mockImages);
-    //   setLoading(false);
-    // }, 1000);
   };
 
   // Fetch gallery statistics
   const fetchStats = async () => {
-    // Commented out API call - using mock stats
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/gallery/stats`, {
-        method: 'GET',
-      });
-      if (!response.ok) throw new Error('Failed to fetch stats');
-      const data: GalleryStats = await response.json();
+      const { data }: { data: GalleryStats } = await api.get('/admin/gallery/stats');
       setStats(data);
     } catch (err) {
       console.error('Error fetching stats:', err);
+      setStats({ total: 0, by_category: [] });
     }
-    
-    // Mock stats
-    // setStats({
-    //   total: 2,
-    //   by_category: [
-    //     { category: 'accommodation', count: 1 },
-    //     { category: 'nature', count: 1 }
-    //   ]
-    // });
   };
 
-  // Upload images to backend
+  // Upload images: first to oraastays.com/upload_gallery.php, then save metadata to our API
   const handleUpload = async (files: FileList | null, details: typeof uploadDetails) => {
     if (!files || files.length === 0) return;
 
-    // Commented out API upload - using mock upload
     try {
       setUploading(true);
       setError('');
@@ -143,9 +105,9 @@ const Gallery = () => {
 
       for (const file of Array.from(files)) {
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('file', file); // PHP expects 'file'
 
-        const res = await fetch('https://plumeriaretreat.com/upload.php', {
+        const res = await fetch(GALLERY_UPLOAD_URL, {
           method: 'POST',
           body: formData,
         });
@@ -154,39 +116,37 @@ const Gallery = () => {
 
         try {
           data = JSON.parse(rawText);
-        } catch (err) {
-          console.error('Non-JSON PHP response:', rawText);
-          throw new Error(`Server error: ${rawText || res.statusText}`);
+        } catch {
+          throw new Error(`Gallery upload failed: ${rawText || res.statusText}`);
         }
 
-        if (data.success && data.filename) {
-          uploadedImages.push({
-            src: data.url,
-            alt: details.alt_text || file.name,
-          });
-        } else {
-          throw new Error(data.message || 'Upload failed on server');
+        // Handle the PHP script response: success: true and file_url
+        let url = '';
+        if (data.file_url) url = data.file_url;
+        else if (data.success === true && data.file_url) url = data.file_url;
+        else if (data.url) url = data.url;
+        else if (data.image_url) url = data.image_url;
+        else if (data.path) url = data.path;
+        else if (typeof data === 'string') url = data;
+
+        if (!url || data.success === false) {
+          throw new Error(data.message || 'Upload did not return an image URL. Response: ' + JSON.stringify(data));
         }
+
+        // The PHP script already returns a full HTTPS URL in 'file_url'
+        uploadedImages.push({
+          src: url,
+          alt: details.alt_text || file.name,
+        });
       }
 
-      const response = await fetch(`${API_BASE_URL}/admin/gallery/upload`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          images: uploadedImages,
-          category: details.category,
-          title: details.title,
-          alt_text: details.alt_text,
-          description: details.description,
-        }),
+      const { data: savedData }: { data: { images: GalleryImage[] } } = await api.post('/admin/gallery/upload', {
+        images: uploadedImages,
+        category: details.category,
+        title: details.title,
+        alt_text: details.alt_text,
+        description: details.description,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Image metadata save failed');
-      }
-
-      const savedData: { images: GalleryImage[] } = await response.json();
       setSuccess(`${savedData.images.length} image(s) uploaded successfully`);
 
       await fetchImages();
@@ -199,29 +159,12 @@ const Gallery = () => {
         alt_text: '',
         description: ''
       });
-
     } catch (err: any) {
       setError(err.message || 'Image upload failed');
       console.error('Upload error:', err);
     } finally {
       setUploading(false);
     }
-    
-    // Mock upload
-    // setUploading(true);
-    // setTimeout(() => {
-    //   setSuccess(`${files.length} image(s) uploaded successfully`);
-    //   setUploading(false);
-      
-    //   // Reset form
-    //   if (fileInputRef.current) fileInputRef.current.value = '';
-    //   setUploadDetails({
-    //     category: 'accommodation',
-    //     title: '',
-    //     alt_text: '',
-    //     description: ''
-    //   });
-    // }, 2000);
   };
 
   // Handle modal upload
@@ -233,25 +176,11 @@ const Gallery = () => {
   };
 
   // Delete image from backend
-  const handleDelete = async (imageId: string, imageUrl?: string) => {
+  const handleDelete = async (imageId: string) => {
     if (!window.confirm('Are you sure you want to delete this image?')) return;
 
-    // Commented out API delete - using mock delete
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/gallery/${imageId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        let errorMsg = 'Delete failed';
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.error || errorMsg;
-        } catch {
-          errorMsg = response.statusText || errorMsg;
-        }
-        throw new Error(errorMsg);
-      }
+      await api.delete(`/admin/gallery/${imageId}`);
 
       setSuccess('Image deleted successfully');
       setImages(prev => prev.filter(img => img.id !== imageId));
@@ -260,10 +189,6 @@ const Gallery = () => {
       setError(err.message || 'Failed to delete image');
       console.error('Delete error:', err);
     }
-    
-    // Mock delete
-    // setSuccess('Image deleted successfully');
-    // setImages(prev => prev.filter(img => img.id !== imageId));
   };
 
   // Clear messages after 3 seconds
@@ -348,7 +273,7 @@ const Gallery = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Category *</label>
                 <select
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-blue-600 focus:border-blue-700"
                   value={uploadDetails.category}
                   onChange={e => setUploadDetails({ ...uploadDetails, category: e.target.value })}
                   required
@@ -363,7 +288,7 @@ const Gallery = () => {
                 <label className="block text-sm font-medium text-gray-700">Title *</label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-blue-600 focus:border-blue-700"
                   value={uploadDetails.title}
                   onChange={e => setUploadDetails({ ...uploadDetails, title: e.target.value })}
                   placeholder="Enter image title"
@@ -375,7 +300,7 @@ const Gallery = () => {
                 <label className="block text-sm font-medium text-gray-700">Alt Text *</label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-blue-600 focus:border-blue-700"
                   value={uploadDetails.alt_text}
                   onChange={e => setUploadDetails({ ...uploadDetails, alt_text: e.target.value })}
                   placeholder="Enter alt text for accessibility"
@@ -386,7 +311,7 @@ const Gallery = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Description</label>
                 <textarea
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-blue-600 focus:border-blue-700"
                   value={uploadDetails.description}
                   onChange={e => setUploadDetails({ ...uploadDetails, description: e.target.value })}
                   placeholder="Enter image description (optional)"
@@ -432,7 +357,7 @@ const Gallery = () => {
             type="button"
             onClick={triggerUpload}
             disabled={uploading}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <UploadCloud className="h-4 w-4 mr-2" />
             {uploading ? 'Uploading...' : 'Upload Images'}
@@ -474,7 +399,7 @@ const Gallery = () => {
             placeholder="Search gallery..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-600 focus:border-blue-700 sm:text-sm"
           />
           {searchTerm && (
             <button
@@ -492,7 +417,7 @@ const Gallery = () => {
         <select
           id="mobile-tabs"
           name="mobile-tabs"
-          className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-600 focus:border-blue-700 sm:text-sm"
           value={activeFilter}
           onChange={(e) => setActiveFilter(e.target.value)}
         >
@@ -519,8 +444,8 @@ const Gallery = () => {
                   key={filter.id}
                   onClick={() => setActiveFilter(filter.id)}
                   className={`${activeFilter === filter.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-700 text-blue-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     } whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150`}
                 >
                   {filter.name} ({count})
@@ -534,7 +459,7 @@ const Gallery = () => {
       {/* Loading state */}
       {loading && (
         <div className="flex justify-center items-center py-10">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
           <span className="ml-2 text-gray-600">Loading images...</span>
         </div>
       )}
@@ -564,7 +489,7 @@ const Gallery = () => {
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity duration-300 flex items-center justify-center">
                   <div className="opacity-0 group-hover:opacity-100 flex space-x-2 transition-opacity duration-200">
                     <button
-                      onClick={() => handleDelete(image.id, image.image_url)}
+                      onClick={() => handleDelete(image.id)}
                       className="p-1.5 bg-white rounded-full text-red-600 hover:bg-red-50 transition-colors"
                       title="Delete image"
                     >
@@ -572,7 +497,7 @@ const Gallery = () => {
                     </button>
                     <button
                       onClick={() => window.open(image.image_url, '_blank')}
-                      className="p-1.5 bg-white rounded-full text-blue-600 hover:bg-blue-50 transition-colors"
+                      className="p-1.5 bg-white rounded-full text-blue-700 hover:bg-blue-50 transition-colors"
                       title="View full image"
                     >
                       <Eye className="h-4 w-4" />
@@ -622,7 +547,7 @@ const Gallery = () => {
           {(!searchTerm && activeFilter === 'all') && (
             <button
               onClick={triggerUpload}
-              className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800"
             >
               <UploadCloud className="h-4 w-4 mr-2" />
               Upload Images

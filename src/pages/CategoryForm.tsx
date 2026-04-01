@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Grid, Save, Loader } from 'lucide-react';
+import { api } from '../lib/apiClient';
 
 interface Category {
   id?: number;
@@ -36,9 +37,7 @@ const CategoryForm: React.FC = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('https://api.nirwanastays.com/admin/categories');
-      if (!response.ok) throw new Error('Failed to fetch categories');
-      const data = await response.json();
+      const { data } = await api.get('/admin/categories');
       setCategories(data);
     } catch (err) {
       console.error('Error fetching categories:', err);
@@ -48,9 +47,7 @@ const CategoryForm: React.FC = () => {
   const fetchCategory = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`https://api.nirwanastays.com/admin/categories/${id}`);
-      if (!response.ok) throw new Error('Category not found');
-      const data = await response.json();
+      const { data } = await api.get(`/admin/categories/${id}`);
       setFormData(data);
     } catch (err) {
       console.error('Error fetching category:', err);
@@ -90,20 +87,10 @@ const CategoryForm: React.FC = () => {
       setLoading(true);
       setError('');
 
-      const url = isEditing
-        ? `https://api.nirwanastays.com/admin/categories/${id}`
-        : 'https://api.nirwanastays.com/admin/categories';
-
-      const response = await fetch(url, {
-        method: isEditing ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save category');
+      if (isEditing) {
+        await api.put(`/admin/categories/${id}`, formData);
+      } else {
+        await api.post('/admin/categories', formData);
       }
 
       navigate('/categories');
@@ -118,7 +105,7 @@ const CategoryForm: React.FC = () => {
   if (loading && isEditing && !formData.name) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader className="h-8 w-8 animate-spin text-blue-700" />
         <span className="ml-2 text-gray-600">Loading category...</span>
       </div>
     );
@@ -174,7 +161,7 @@ const CategoryForm: React.FC = () => {
                     required
                     value={formData.name}
                     onChange={handleNameChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                   />
                 </div>
               </div>
@@ -190,7 +177,7 @@ const CategoryForm: React.FC = () => {
                     id="slug"
                     value={formData.slug}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-50"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-50"
                     readOnly
                   />
                 </div>
@@ -207,7 +194,7 @@ const CategoryForm: React.FC = () => {
                     rows={3}
                     value={formData.description}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                   />
                 </div>
               </div>
@@ -222,7 +209,7 @@ const CategoryForm: React.FC = () => {
                     name="parent_id"
                     value={formData.parent_id || ''}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                   >
                     <option value="">None</option>
                     {categories
@@ -244,7 +231,7 @@ const CategoryForm: React.FC = () => {
                     type="checkbox"
                     checked={formData.active}
                     onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-blue-700 focus:ring-blue-600 border-gray-300 rounded"
                   />
                   <label htmlFor="active" className="ml-2 block text-sm text-gray-700">
                     Active
@@ -259,14 +246,14 @@ const CategoryForm: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/categories')}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 disabled:opacity-50"
           >
             {loading ? (
               <>

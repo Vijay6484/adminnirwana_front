@@ -24,7 +24,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
   booking, 
   onClose, 
   onPaymentAdded,
-  apiBaseUrl = 'https://api.nirwanastays.com/admin'
+  apiBaseUrl = 'https://api.oraastay.com/api/admin'
 }) => {
   const [paymentType, setPaymentType] = useState<'full' | 'partial'>('full');
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -204,7 +204,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                           id="full-payment"
                           name="payment-type"
                           type="radio"
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          className="h-4 w-4 text-blue-700 focus:ring-blue-600 border-gray-300"
                           checked={paymentType === 'full'}
                           onChange={() => setPaymentType('full')}
                           disabled={loading}
@@ -218,7 +218,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                           id="partial-payment"
                           name="payment-type"
                           type="radio"
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          className="h-4 w-4 text-blue-700 focus:ring-blue-600 border-gray-300"
                           checked={paymentType === 'partial'}
                           onChange={() => setPaymentType('partial')}
                           disabled={loading}
@@ -239,7 +239,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                       id="payment-method"
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                       required
                       disabled={loading}
                     >
@@ -267,7 +267,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                       onChange={(e) => setAmount(e.target.value)}
                       min="1"
                       max={getRemainingAmount()}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                       required
                       disabled={loading || paymentType === 'full'}
                       placeholder={paymentType === 'full' ? 'Full remaining amount' : 'Enter amount'}
@@ -289,7 +289,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                       id="transaction-id"
                       value={transactionId}
                       onChange={(e) => setTransactionId(e.target.value)}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                       disabled={loading}
                       placeholder="Optional reference number"
                     />
@@ -305,7 +305,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                       rows={2}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                       disabled={loading}
                       placeholder="Optional notes about this payment"
                     />
@@ -319,7 +319,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
               type="submit"
               onClick={handleSubmit}
               disabled={loading || !paymentMethod || !amount}
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-700 text-base font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -334,7 +334,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>

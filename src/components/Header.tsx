@@ -1,5 +1,6 @@
 import React from 'react';
 import { Menu, Bell, User, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface HeaderProps {
@@ -8,10 +9,12 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
       logout();
+      navigate('/login');
     }
   };
 
@@ -29,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
             </button>
             <h1 className="ml-2 md:ml-0 text-lg md:text-xl font-semibold text-gray-800">
               <span className="bg-gradient-to-r from-nature-600 to-nature-700 bg-clip-text text-transparent">
-                Lakeview Resort Admin
+                MasterAdmin
               </span>
             </h1>
           </div>

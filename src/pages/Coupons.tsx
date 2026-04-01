@@ -3,7 +3,7 @@ import {
   Plus, Search, Trash2, Edit2, XCircle, AlertCircle, CheckCircle,
   Calendar, Users, Percent, Copy, Check as CheckIcon, IndianRupee
 } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../lib/apiClient';
 
 interface Coupon {
   id: number;
@@ -39,8 +39,6 @@ interface Accommodation {
   id: number;
   name: string
 }
-const API_BASE_URL = 'https://api.nirwanastays.com/admin';
-
 const defaultCoupon: CouponFormData = {
   code: '',
   discount: 0,
@@ -70,14 +68,14 @@ const Coupons: React.FC = () => {
 
   const fetchAccommodation = useCallback(async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/properties/accommodations`);
+      const response = await api.get('/admin/properties/accommodations');
       console.log('Accommodation response:', response.data);
 
       const accommodations = response.data?.data;
 
       if (Array.isArray(accommodations)) {
         const simplified = accommodations.map((acc: any) => ({
-          id: acc.id,
+          id: acc.id || acc._id,
           name: acc.name,
         }));
         console.log('Fetched accommodations:', simplified);
@@ -96,11 +94,9 @@ const Coupons: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const url = search
-        ? `${API_BASE_URL}/coupons?search=${encodeURIComponent(search)}`
-        : `${API_BASE_URL}/coupons`;
-      const response = await fetch(url);
-      const data = await response.json();
+      const { data } = await api.get('/admin/coupons', {
+        params: search ? { search } : undefined,
+      });
       console.log('Coupons response:', data);
       if (data.success && Array.isArray(data.data)) {
         setCoupons(
@@ -172,14 +168,9 @@ const Coupons: React.FC = () => {
   const handleToggleStatus = async (id: number) => {
     try {
       setActionLoading(id);
-      const response = await fetch(`${API_BASE_URL}/coupons/${id}/toggle`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const { data } = await api.patch(`/admin/coupons/${id}/toggle`);
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         showMessage(data.message || 'Coupon status updated successfully', 'success');
         await fetchCoupons();
       } else {
@@ -199,14 +190,9 @@ const Coupons: React.FC = () => {
 
     try {
       setActionLoading(id);
-      const response = await fetch(`${API_BASE_URL}/coupons/${id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const { data } = await api.delete(`/admin/coupons/${id}`);
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         showMessage(data.message || 'Coupon deleted successfully', 'success');
         await fetchCoupons();
       } else {
@@ -241,26 +227,19 @@ const Coupons: React.FC = () => {
 
     try {
       setActionLoading(-1);
-      const response = await fetch(`${API_BASE_URL}/coupons`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: newCoupon.code.trim(),
-          discount: Number(newCoupon.discount),                 // ✅ corrected field name
-          discountType: newCoupon.discountType,
-          minAmount: newCoupon.minAmount ? Number(newCoupon.minAmount) : null,
-          maxDiscount: newCoupon.maxDiscount ? Number(newCoupon.maxDiscount) : null,
-          usageLimit: newCoupon.usageLimit ? Number(newCoupon.usageLimit) : null,
-          active: newCoupon.active,
-          expiryDate: newCoupon.expiryDate,
-          accommodationType: newCoupon.accommodationType || 'all',
-        }),
-
+      const { data } = await api.post('/admin/coupons', {
+        code: newCoupon.code.trim(),
+        discount: Number(newCoupon.discount),                 // ✅ corrected field name
+        discountType: newCoupon.discountType,
+        minAmount: newCoupon.minAmount ? Number(newCoupon.minAmount) : null,
+        maxDiscount: newCoupon.maxDiscount ? Number(newCoupon.maxDiscount) : null,
+        usageLimit: newCoupon.usageLimit ? Number(newCoupon.usageLimit) : null,
+        active: newCoupon.active,
+        expiryDate: newCoupon.expiryDate,
+        accommodationType: newCoupon.accommodationType || 'all',
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         showMessage(data.message || 'Coupon created successfully', 'success');
         setShowAddModal(false);
         setNewCoupon({ ...defaultCoupon });
@@ -286,26 +265,19 @@ const Coupons: React.FC = () => {
 
     try {
       setActionLoading(editingCoupon.id || 0);
-      const response = await fetch(`${API_BASE_URL}/coupons/${editingCoupon.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: editingCoupon.code.trim(),
-          discount: Number(editingCoupon.discount),             // ✅ Correct key!
-          discountType: editingCoupon.discountType,
-          minAmount: editingCoupon.minAmount ? Number(editingCoupon.minAmount) : null,
-          maxDiscount: editingCoupon.maxDiscount ? Number(editingCoupon.maxDiscount) : null,
-          usageLimit: editingCoupon.usageLimit ? Number(editingCoupon.usageLimit) : null,
-          active: editingCoupon.active,
-          expiryDate: editingCoupon.expiryDate,
-          accommodationType: editingCoupon.accommodationType || 'all',
-        }),
-
+      const { data } = await api.put(`/admin/coupons/${editingCoupon.id}`, {
+        code: editingCoupon.code.trim(),
+        discount: Number(editingCoupon.discount),             // ✅ Correct key!
+        discountType: editingCoupon.discountType,
+        minAmount: editingCoupon.minAmount ? Number(editingCoupon.minAmount) : null,
+        maxDiscount: editingCoupon.maxDiscount ? Number(editingCoupon.maxDiscount) : null,
+        usageLimit: editingCoupon.usageLimit ? Number(editingCoupon.usageLimit) : null,
+        active: editingCoupon.active,
+        expiryDate: editingCoupon.expiryDate,
+        accommodationType: editingCoupon.accommodationType || 'all',
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         showMessage(data.message || 'Coupon updated successfully', 'success');
         setShowEditModal(false);
         setEditingCoupon(null);
@@ -395,13 +367,13 @@ const Coupons: React.FC = () => {
           <button
             onClick={() => fetchCoupons()}
             disabled={loading}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 disabled:opacity-50"
           >
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Coupon
@@ -449,7 +421,7 @@ const Coupons: React.FC = () => {
             placeholder="Search by code..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
           />
           {searchTerm && (
             <button
@@ -481,7 +453,7 @@ const Coupons: React.FC = () => {
         <div className="bg-white p-4 rounded-lg shadow border">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
-              <Calendar className="h-6 w-6 text-blue-600" />
+              <Calendar className="h-6 w-6 text-blue-700" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Coupons</p>
@@ -590,7 +562,7 @@ const Coupons: React.FC = () => {
                           {coupon.discountType === 'percentage' ? (
                             <Percent className="h-4 w-4 text-green-500" />
                           ) : (
-                            <IndianRupee className="h-4 w-4 text-blue-500" />
+                            <IndianRupee className="h-4 w-4 text-blue-700" />
                           )}
                         </div>
                       </td>
@@ -662,7 +634,7 @@ const Coupons: React.FC = () => {
                           <button
                             onClick={() => openEditModal(coupon)}
                             disabled={actionLoading === coupon.id}
-                            className="text-blue-600 hover:text-blue-900 disabled:opacity-50 transition-colors"
+                            className="text-blue-700 hover:text-blue-900 disabled:opacity-50 transition-colors"
                             title="Edit Coupon"
                           >
                             <Edit2 className="h-5 w-5" />
@@ -697,7 +669,7 @@ const Coupons: React.FC = () => {
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <Plus className="h-6 w-6 text-blue-600" />
+                    <Plus className="h-6 w-6 text-blue-700" />
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                     <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
@@ -715,7 +687,7 @@ const Coupons: React.FC = () => {
                             id="code"
                             value={newCoupon.code}
                             onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value })}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                             required
                           />
                         </div>
@@ -730,7 +702,7 @@ const Coupons: React.FC = () => {
                               id="discount"
                               value={newCoupon.discount}
                               onChange={(e) => setNewCoupon({ ...newCoupon, discount: parseFloat(e.target.value) || 0 })}
-                              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 pr-20 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 pr-20 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                               required
                               min="0"
                               step="0.01"
@@ -739,7 +711,7 @@ const Coupons: React.FC = () => {
                               <select
                                 value={newCoupon.discountType}
                                 onChange={(e) => setNewCoupon({ ...newCoupon, discountType: e.target.value as 'percentage' | 'fixed' })}
-                                className="focus:ring-blue-500 focus:border-blue-500 h-full py-0 pl-2 pr-7 border-transparent bg-transparent text-gray-500 sm:text-sm rounded-md"
+                                className="focus:ring-blue-600 focus:border-blue-600 h-full py-0 pl-2 pr-7 border-transparent bg-transparent text-gray-500 sm:text-sm rounded-md"
                               >
                                 <option value="percentage">%</option>
                                 <option value="fixed">₹</option>
@@ -758,7 +730,7 @@ const Coupons: React.FC = () => {
                               id="minAmount"
                               value={newCoupon.minAmount}
                               onChange={(e) => setNewCoupon({ ...newCoupon, minAmount: e.target.value })}
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                               min="0"
                               step="0.01"
                               placeholder="Optional"
@@ -774,7 +746,7 @@ const Coupons: React.FC = () => {
                               id="maxDiscount"
                               value={newCoupon.maxDiscount}
                               onChange={(e) => setNewCoupon({ ...newCoupon, maxDiscount: e.target.value })}
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                               min="0"
                               step="0.01"
                               placeholder="Optional"
@@ -791,7 +763,7 @@ const Coupons: React.FC = () => {
                             id="usageLimit"
                             value={newCoupon.usageLimit}
                             onChange={(e) => setNewCoupon({ ...newCoupon, usageLimit: e.target.value })}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                             min="0"
                             placeholder="Optional"
                           />
@@ -806,7 +778,7 @@ const Coupons: React.FC = () => {
                             id="expiryDate"
                             value={newCoupon.expiryDate}
                             onChange={(e) => setNewCoupon({ ...newCoupon, expiryDate: e.target.value })}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                             required
                             min={new Date().toISOString().split('T')[0]}
                           />
@@ -820,12 +792,12 @@ const Coupons: React.FC = () => {
                             name="accommodationType"
                             value={newCoupon.accommodationType || 'all'}
                             onChange={(e) => setNewCoupon({ ...newCoupon, accommodationType: e.target.value })}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                             required
                           >
-                            <option value="all">All</option>
+                            <option value="all">All Properties</option>
                             {accommodation.map((acc) => (
-                              <option key={acc.id} value={acc.name}>
+                              <option key={acc.id} value={acc.id}>
                                 {acc.name}
                               </option>
                             ))}
@@ -839,7 +811,7 @@ const Coupons: React.FC = () => {
                             type="checkbox"
                             checked={newCoupon.active}
                             onChange={(e) => setNewCoupon({ ...newCoupon, active: e.target.checked })}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-blue-700 focus:ring-blue-600 border-gray-300 rounded"
                           />
                           <label htmlFor="active" className="ml-2 block text-sm text-gray-700">
                             Active
@@ -854,7 +826,7 @@ const Coupons: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Cancel
                 </button>
@@ -862,7 +834,7 @@ const Coupons: React.FC = () => {
                   type="button"
                   onClick={handleAddCoupon}
                   disabled={actionLoading === -1}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
                 >
                   {actionLoading === -1 ? (
                     <div className="flex items-center">
@@ -890,7 +862,7 @@ const Coupons: React.FC = () => {
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <Edit2 className="h-6 w-6 text-blue-600" />
+                    <Edit2 className="h-6 w-6 text-blue-700" />
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                     <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
@@ -908,7 +880,7 @@ const Coupons: React.FC = () => {
                             id="edit-code"
                             value={editingCoupon.code}
                             onChange={(e) => setEditingCoupon({ ...editingCoupon, code: e.target.value })}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                             required
                           />
                         </div>
@@ -923,7 +895,7 @@ const Coupons: React.FC = () => {
                               id="edit-discount"
                               value={editingCoupon.discount}
                               onChange={(e) => setEditingCoupon({ ...editingCoupon, discount: parseFloat(e.target.value) || 0 })}
-                              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 pr-20 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 pr-20 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                               required
                               min="0"
                               step="0.01"
@@ -932,7 +904,7 @@ const Coupons: React.FC = () => {
                               <select
                                 value={editingCoupon.discountType}
                                 onChange={(e) => setEditingCoupon({ ...editingCoupon, discountType: e.target.value as 'percentage' | 'fixed' })}
-                                className="focus:ring-blue-500 focus:border-blue-500 h-full py-0 pl-2 pr-7 border-transparent bg-transparent text-gray-500 sm:text-sm rounded-md"
+                                className="focus:ring-blue-600 focus:border-blue-600 h-full py-0 pl-2 pr-7 border-transparent bg-transparent text-gray-500 sm:text-sm rounded-md"
                               >
                                 <option value="percentage">%</option>
                                 <option value="fixed">₹</option>
@@ -951,7 +923,7 @@ const Coupons: React.FC = () => {
                               id="edit-minAmount"
                               value={editingCoupon.minAmount}
                               onChange={(e) => setEditingCoupon({ ...editingCoupon, minAmount: e.target.value })}
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                               min="0"
                               step="0.01"
                               placeholder="Optional"
@@ -967,7 +939,7 @@ const Coupons: React.FC = () => {
                               id="edit-maxDiscount"
                               value={editingCoupon.maxDiscount}
                               onChange={(e) => setEditingCoupon({ ...editingCoupon, maxDiscount: e.target.value })}
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                               min="0"
                               step="0.01"
                               placeholder="Optional"
@@ -984,7 +956,7 @@ const Coupons: React.FC = () => {
                             id="edit-usageLimit"
                             value={editingCoupon.usageLimit}
                             onChange={(e) => setEditingCoupon({ ...editingCoupon, usageLimit: e.target.value })}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                             min="0"
                             placeholder="Optional"
                           />
@@ -999,7 +971,7 @@ const Coupons: React.FC = () => {
                             id="edit-expiryDate"
                             value={editingCoupon.expiryDate}
                             onChange={(e) => setEditingCoupon({ ...editingCoupon, expiryDate: e.target.value })}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                             required
                             min={new Date().toISOString().split('T')[0]}
                           />
@@ -1013,12 +985,12 @@ const Coupons: React.FC = () => {
                             name="edit-accommodationType"
                             value={editingCoupon.accommodationType}
                             onChange={(e) => setEditingCoupon({ ...editingCoupon, accommodationType: e.target.value })}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                             required
                           >
-                            <option value="all">All</option>
+                            <option value="all">All Properties</option>
                             {accommodation.map((acc) => (
-                              <option key={acc.id} value={acc.name}>
+                              <option key={acc.id} value={acc.id}>
                                 {acc.name}
                               </option>
                             ))}
@@ -1033,7 +1005,7 @@ const Coupons: React.FC = () => {
                             type="checkbox"
                             checked={editingCoupon.active}
                             onChange={(e) => setEditingCoupon({ ...editingCoupon, active: e.target.checked })}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-blue-700 focus:ring-blue-600 border-gray-300 rounded"
                           />
                           <label htmlFor="edit-active" className="ml-2 block text-sm text-gray-700">
                             Active
@@ -1048,7 +1020,7 @@ const Coupons: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Cancel
                 </button>
@@ -1056,7 +1028,7 @@ const Coupons: React.FC = () => {
                   type="button"
                   onClick={handleEditCoupon}
                   disabled={actionLoading === editingCoupon.id}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
                 >
                   {actionLoading === editingCoupon.id ? (
                     <div className="flex items-center">

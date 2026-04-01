@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Pencil, XCircle } from "lucide-react";
+import { api } from "../lib/apiClient";
 
 type Category = {
   id: number;
@@ -16,10 +17,7 @@ const Categories = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(
-          "https://api.nirwanastays.com/admin/properties/accommodations"
-        );
-        const data = await response.json();
+        const { data } = await api.get("/admin/properties/accommodations");
         
         // Transform API data into our category format
         const transformedCategories = data.data.map((acc: any) => ({

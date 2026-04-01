@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, Music, UtensilsCrossed, Flame, Coffee, Plus, Trash2, Edit, Snowflake, ThermometerSun, ParkingCircle, TreePine, Flower2, CupSoda, Waves } from 'lucide-react';
+import { Wifi, Music, UtensilsCrossed, Flame, Coffee, Plus, Trash2, Edit, Snowflake, ThermometerSun, ParkingCircle, TreePine, Flower2, CupSoda, Waves, AlertCircle } from 'lucide-react';
+import { api } from '../lib/apiClient';
+
 interface Amenity {
-  id: number;
+  id: string;
   name: string;
   icon: string;
   active: boolean;
 }
 
-const API_BASE_URL = 'https://api.nirwanastays.com/admin/amenities';
-
 const Amenities = () => {
   const [amenities, setAmenities] = useState<Amenity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newAmenity, setNewAmenity] = useState({ name: '', icon: 'wifi' });
   const [editAmenity, setEditAmenity] = useState<Amenity | null>(null);
@@ -20,43 +22,61 @@ const Amenities = () => {
   }, []);
 
   const fetchAmenities = async () => {
-    const res = await fetch(API_BASE_URL);
-    const data = await res.json();
-    setAmenities(data);
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await api.get('/admin/amenities');
+      const list = Array.isArray(data) ? data : (data.data || data.amenities || []);
+      setAmenities(list.map((a: any) => ({
+        id: String(a.id ?? a._id),
+        name: a.name || '',
+        icon: a.icon || 'wifi',
+        active: a.active !== false,
+      })));
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch amenities');
+      setAmenities([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this amenity?')) {
-      await fetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' });
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this amenity?')) return;
+    try {
+      await api.delete(`/admin/amenities/${id}`);
       setAmenities(amenities.filter(a => a.id !== id));
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete');
     }
   };
 
   const handleAdd = async () => {
-    if (newAmenity.name.trim()) {
-      const res = await fetch(API_BASE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newAmenity, active: 1 })
+    if (!newAmenity.name.trim()) return;
+    try {
+      setError('');
+      const { data: added } = await api.post('/admin/amenities', {
+        name: newAmenity.name.trim(),
+        icon: newAmenity.icon,
+        active: true,
       });
-      const added = await res.json();
-      setAmenities([added, ...amenities]);
+      setAmenities([{ id: added.id, name: added.name, icon: added.icon || 'wifi', active: added.active !== false }, ...amenities]);
       setNewAmenity({ name: '', icon: 'wifi' });
       setShowAddModal(false);
+    } catch (err: any) {
+      setError(err.message || 'Failed to add amenity');
     }
   };
 
   const handleEdit = async () => {
-    if (editAmenity && editAmenity.name.trim()) {
-      const res = await fetch(`${API_BASE_URL}/${editAmenity.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editAmenity),
-      });
-      if (res.ok) {
-        setAmenities(amenities.map(a => (a.id === editAmenity.id ? editAmenity : a)));
-        setEditAmenity(null);
-      }
+    if (!editAmenity || !editAmenity.name.trim()) return;
+    try {
+      setError('');
+      await api.put(`/admin/amenities/${editAmenity.id}`, editAmenity);
+      setAmenities(amenities.map(a => (a.id === editAmenity.id ? editAmenity : a)));
+      setEditAmenity(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update amenity');
     }
   };
 
@@ -96,18 +116,30 @@ const Amenities = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 space-y-6 pb-16 md:pb-0">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">Amenities</h1>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors"
         >
           <Plus className="w-5 h-5" />
           <span>Add Amenity</span>
         </button>
       </div>
 
+      {error && (
+        <div className="rounded-md bg-red-50 p-4 flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-700" />
+        </div>
+      ) : (
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -147,7 +179,7 @@ const Amenities = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end space-x-2">
                     <button
-                      className="text-blue-600 hover:text-blue-900"
+                      className="text-blue-700 hover:text-blue-900"
                       onClick={() => setEditAmenity(amenity)}
                     >
                       <Edit className="h-5 w-5" />
@@ -165,6 +197,7 @@ const Amenities = () => {
           </tbody>
         </table>
       </div>
+      )}
 
       {/* Add Amenity Modal */}
       {showAddModal && (
@@ -184,7 +217,7 @@ const Amenities = () => {
                       type="text"
                       value={newAmenity.name}
                       onChange={(e) => setNewAmenity({ ...newAmenity, name: e.target.value })}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                     />
                   </div>
                   <div>
@@ -192,7 +225,7 @@ const Amenities = () => {
                     <select
                       value={newAmenity.icon}
                       onChange={(e) => setNewAmenity({ ...newAmenity, icon: e.target.value })}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                     >
                       <option value="wifi">WiFi</option>
                       <option value="pool">Swimming Pool</option>
@@ -217,14 +250,14 @@ const Amenities = () => {
                 <button
                   type="button"
                   onClick={handleAdd}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-700 text-base font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Add Amenity
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Cancel
                 </button>
@@ -251,7 +284,7 @@ const Amenities = () => {
                       type="text"
                       value={editAmenity.name}
                       onChange={(e) => setEditAmenity({ ...editAmenity, name: e.target.value })}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                     />
                   </div>
                   <div>
@@ -259,7 +292,7 @@ const Amenities = () => {
                     <select
                       value={editAmenity.icon}
                       onChange={(e) => setEditAmenity({ ...editAmenity, icon: e.target.value })}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                     >
                       <option value="wifi">WiFi</option>
                       <option value="pool">Swimming Pool</option>
@@ -283,7 +316,7 @@ const Amenities = () => {
                     <select
                       value={editAmenity.active ? 1 : 0}
                       onChange={(e) => setEditAmenity({ ...editAmenity, active: Number(e.target.value) === 1 })}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                     >
                       <option value={1}>Active</option>
                       <option value={0}>Inactive</option>
@@ -295,14 +328,14 @@ const Amenities = () => {
                 <button
                   type="button"
                   onClick={handleEdit}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-700 text-base font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Save Changes
                 </button>
                 <button
                   type="button"
                   onClick={() => setEditAmenity(null)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Cancel
                 </button>

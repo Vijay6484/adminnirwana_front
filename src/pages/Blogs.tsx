@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Trash2, Edit2, XCircle, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-
-const API_BASE_URL = 'https://api.nirwanastays.com/admin/blogs';
+import { api } from '../lib/apiClient';
+import { API_BASE_URL } from '../config';
 
 interface Blog {
   id: number;
@@ -51,14 +51,9 @@ const Blogs: React.FC = () => {
       if (searchTerm) params.append('search', searchTerm);
       if (selectedCategory !== 'all') params.append('category', selectedCategory);
       
-      const url = `${API_BASE_URL}?${params.toString()}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch blogs');
-      }
-      
-      const data = await response.json();
+      const { data } = await api.get('/admin/blogs', {
+        params: Object.fromEntries(params.entries()),
+      });
       setBlogs(data.blogs || data || []);
     } catch (err: any) {
       console.error('Error fetching blogs:', err);
@@ -94,13 +89,7 @@ const Blogs: React.FC = () => {
     if (result.isConfirmed) {
       try {
         setDeleteLoading(id);
-        const response = await fetch(`${API_BASE_URL}/${id}`, {
-          method: 'DELETE'
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to delete blog');
-        }
+        await api.delete(`/admin/blogs/${id}`);
 
         Swal.fire('Deleted!', 'Blog has been deleted.', 'success');
         fetchBlogs();
@@ -129,7 +118,7 @@ const Blogs: React.FC = () => {
   const getImageUrl = (image: string) => {
     if (!image) return 'https://images.pexels.com/photos/2666598/pexels-photo-2666598.jpeg';
     if (image.startsWith('http')) return image;
-    if (image.startsWith('/uploads')) return `https://api.nirwanastays.com${image}`;
+    if (image.startsWith('/uploads')) return `https://api.oraastay.com/api${image}`;
     return image;
   };
 

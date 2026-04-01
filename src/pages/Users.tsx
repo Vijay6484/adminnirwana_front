@@ -11,13 +11,14 @@ import {
   User,
   Save,
   Loader,
-  Users2Icon,
   Phone,
 } from 'lucide-react';
+import { api } from '../lib/apiClient';
+import { STAFF_PERMISSION_OPTIONS } from '../lib/permissions';
 
 // User Interface
 interface User {
-  id: number;
+  id: string | number;
   name: string;
   email: string;
   phoneNumber: string;
@@ -25,6 +26,7 @@ interface User {
   status: string;
   lastLogin?: string;
   avatar?: string;
+  permissions?: string[];
 }
 
 // User Form Data Interface
@@ -37,12 +39,13 @@ interface UserData {
   avatar?: string;
   password?: string;
   confirmPassword?: string;
+  permissions: string[];
 }
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | number | null>(null);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -57,6 +60,7 @@ const Users: React.FC = () => {
     avatar: '',
     password: '',
     confirmPassword: '',
+    permissions: [],
   });
 
   const [filters, setFilters] = useState({
@@ -69,12 +73,18 @@ const Users: React.FC = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await fetch('https://api.nirwanastays.com/admin/users');
-        if (!response.ok) {
-          throw new Error('Failed to fetch users');
-        }
-        const data = await response.json();
-        setUsers(data);
+        const response = await api.get('/admin/users');
+        const data = response.data;
+        const list = Array.isArray(data) ? data : [];
+        setUsers(
+          list.map((u: any) => ({
+            ...u,
+            id: u.id,
+            status: u.status || 'active',
+            phoneNumber: u.phoneNumber || '',
+            permissions: u.permissions || [],
+          }))
+        );
       } catch (err) {
         console.error('Error fetching users:', err);
         setError('Failed to load users');
@@ -86,17 +96,12 @@ const Users: React.FC = () => {
     fetchUsers();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string | number) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         setDeletingId(id);
-        const response = await fetch(`https://api.nirwanastays.com/admin/users/${id}`, {
-          method: 'DELETE',
-        });
-        if (!response.ok) {
-          throw new Error('Failed to delete user');
-        }
-        setUsers(users.filter((user) => user.id !== id));
+        await api.delete(`/admin/users/${id}`);
+        setUsers(users.filter((user) => String(user.id) !== String(id)));
       } catch (err) {
         console.error('Error deleting user:', err);
         setError('Failed to delete user');
@@ -117,6 +122,7 @@ const Users: React.FC = () => {
       avatar: user.avatar || '',
       password: '',
       confirmPassword: '',
+      permissions: user.permissions || [],
     });
     setShowModal(true);
   };
@@ -133,10 +139,23 @@ const Users: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    if (name === 'role' && value !== 'staff') {
+      setFormData((prev) => ({ ...prev, role: value, permissions: [] }));
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const toggleStaffPermission = (key: string) => {
+    setFormData((prev) => {
+      const set = new Set(prev.permissions);
+      if (set.has(key)) set.delete(key);
+      else set.add(key);
+      return { ...prev, permissions: Array.from(set) };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -151,30 +170,37 @@ const Users: React.FC = () => {
       setLoading(true);
       setError('');
 
-      const url = editingUser 
-        ? `https://api.nirwanastays.com/admin/users/${editingUser.id}`
-        : 'https://api.nirwanastays.com/admin/users';
-
-      const method = editingUser ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error(editingUser ? 'Failed to update user' : 'Failed to create user');
+      const payload: Record<string, unknown> = {
+        name: formData.name,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        role: formData.role,
+        status: formData.status === 'suspended' ? 'inactive' : formData.status,
+        permissions: formData.role === 'staff' ? formData.permissions : [],
+      };
+      if (formData.password) {
+        payload.password = formData.password;
       }
 
-      const updatedUser = await response.json();
+      let updatedUser: User;
+      if (editingUser) {
+        const res = await api.put(`/admin/users/${editingUser.id}`, payload);
+        updatedUser = res.data;
+      } else {
+        if (!formData.password) {
+          setError('Password is required for new users');
+          setLoading(false);
+          return;
+        }
+        payload.password = formData.password;
+        const res = await api.post('/admin/users', payload);
+        updatedUser = res.data;
+      }
       
       if (editingUser) {
-        setUsers(users.map(user => user.id === editingUser.id ? updatedUser : user));
+        setUsers(users.map((user) => (String(user.id) === String(editingUser.id) ? { ...updatedUser, status: updatedUser.status || 'active' } : user)));
       } else {
-        setUsers([...users, updatedUser]);
+        setUsers([...users, { ...updatedUser, status: updatedUser.status || 'active' }]);
       }
 
       // Reset form and close modal
@@ -187,6 +213,7 @@ const Users: React.FC = () => {
         avatar: '',
         password: '',
         confirmPassword: '',
+        permissions: [],
       });
       setEditingUser(null);
       setShowModal(false);
@@ -215,7 +242,7 @@ const Users: React.FC = () => {
       case 'admin':
         return 'bg-purple-100 text-purple-800';
       case 'manager':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-900';
       case 'staff':
         return 'bg-green-100 text-green-800';
       default:
@@ -258,10 +285,11 @@ const Users: React.FC = () => {
                     avatar: '',
                     password: '',
                     confirmPassword: '',
+                    permissions: [],
                   });
                   setShowModal(true);
                 }}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add User
@@ -280,7 +308,7 @@ const Users: React.FC = () => {
                 placeholder="Search users by name, email, or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
               />
               {searchTerm && (
                 <button
@@ -294,7 +322,7 @@ const Users: React.FC = () => {
             <button
               type="button"
               onClick={() => setFilterOpen(!filterOpen)}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
             >
               <Filter className="h-4 w-4 mr-2" />
               Filter
@@ -311,7 +339,7 @@ const Users: React.FC = () => {
                   <select
                     value={filters.role}
                     onChange={(e) => setFilters({ ...filters, role: e.target.value })}
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                   >
                     <option value="">All Roles</option>
                     <option value="admin">Admin</option>
@@ -324,7 +352,7 @@ const Users: React.FC = () => {
                   <select
                     value={filters.status}
                     onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                   >
                     <option value="">All Status</option>
                     <option value="active">Active</option>
@@ -337,14 +365,14 @@ const Users: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setFilters({ role: '', status: '' })}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
                 >
                   Reset
                 </button>
                 <button
                   type="button"
                   onClick={() => setFilterOpen(false)}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
                 >
                   Apply
                 </button>
@@ -355,7 +383,7 @@ const Users: React.FC = () => {
           {/* Loading State */}
           {loading && !showModal && (
             <div className="flex justify-center items-center h-64">
-              <Loader className="h-8 w-8 animate-spin text-blue-600" />
+              <Loader className="h-8 w-8 animate-spin text-blue-700" />
               <span className="ml-2 text-gray-600">Loading users...</span>
             </div>
           )}
@@ -436,7 +464,7 @@ const Users: React.FC = () => {
                           <div className="flex justify-end space-x-2">
                             <button 
                               onClick={() => handleEdit(user)} 
-                              className="text-blue-600 hover:text-blue-900"
+                              className="text-blue-700 hover:text-blue-900"
                             >
                               <Edit className="h-5 w-5" />
                             </button>
@@ -481,7 +509,7 @@ const Users: React.FC = () => {
                       setEditingUser(null);
                       setShowModal(true);
                     }}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add User
@@ -510,7 +538,7 @@ const Users: React.FC = () => {
                   <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <div className="sm:flex sm:items-start">
                       <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
-                        <User className="h-6 w-6 text-blue-600" />
+                        <User className="h-6 w-6 text-blue-700" />
                       </div>
                       <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                         <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-headline">
@@ -542,7 +570,7 @@ const Users: React.FC = () => {
                                   required
                                   value={formData.name}
                                   onChange={handleChange}
-                                  className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
+                                  className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
                                 />
                               </div>
                             </div>
@@ -558,7 +586,7 @@ const Users: React.FC = () => {
                                   required
                                   value={formData.email}
                                   onChange={handleChange}
-                                  className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
+                                  className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
                                 />
                               </div>
                             </div>
@@ -574,7 +602,7 @@ const Users: React.FC = () => {
                                   required
                                   value={formData.phoneNumber}
                                   onChange={handleChange}
-                                  className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
+                                  className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
                                 />
                               </div>
                             </div>
@@ -589,7 +617,7 @@ const Users: React.FC = () => {
                                   required
                                   value={formData.role}
                                   onChange={handleChange}
-                                  className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
+                                  className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
                                 >
                                   <option value="admin">Admin</option>
                                   <option value="manager">Manager</option>
@@ -597,6 +625,24 @@ const Users: React.FC = () => {
                                 </select>
                               </div>
                             </div>
+                            {formData.role === 'staff' && (
+                              <div className="border border-gray-200 rounded-md p-3 max-h-48 overflow-y-auto">
+                                <p className="text-sm font-medium text-gray-700 mb-2">Page access (not Dashboard / Users)</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {STAFF_PERMISSION_OPTIONS.map((opt) => (
+                                    <label key={opt.key} className="flex items-center gap-2 text-sm text-gray-600">
+                                      <input
+                                        type="checkbox"
+                                        checked={formData.permissions.includes(opt.key)}
+                                        onChange={() => toggleStaffPermission(opt.key)}
+                                        className="rounded border-gray-300"
+                                      />
+                                      {opt.label}
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                             <div>
                               <label htmlFor="status" className="block text-sm font-medium text-gray-700">
                                 Status *
@@ -608,7 +654,7 @@ const Users: React.FC = () => {
                                   required
                                   value={formData.status}
                                   onChange={handleChange}
-                                  className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
+                                  className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
                                 >
                                   <option value="active">Active</option>
                                   <option value="inactive">Inactive</option>
@@ -628,7 +674,7 @@ const Users: React.FC = () => {
                                   required={!editingUser}
                                   value={formData.password}
                                   onChange={handleChange}
-                                  className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
+                                  className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
                                 />
                               </div>
                             </div>
@@ -644,7 +690,7 @@ const Users: React.FC = () => {
                                   required={!editingUser}
                                   value={formData.confirmPassword}
                                   onChange={handleChange}
-                                  className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
+                                  className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
                                 />
                               </div>
                             </div>
@@ -662,7 +708,7 @@ const Users: React.FC = () => {
                               <button
                                 type="submit"
                                 disabled={loading}
-                                className="mt-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:col-start-2 sm:text-sm disabled:opacity-50"
+                                className="mt-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-700 text-base font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:mt-0 sm:col-start-2 sm:text-sm disabled:opacity-50"
                               >
                                 {loading ? (
                                   <>

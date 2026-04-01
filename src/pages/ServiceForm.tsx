@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Coffee, Save, Loader, AlertCircle, Upload } from 'lucide-react';
-
-const API_BASE_URL =  'https://api.nirwanastays.com/admin';
+import { api } from '../lib/apiClient';
 
 const ServiceForm = () => {
   // Get ID from URL params (simulate useParams)
@@ -46,13 +45,7 @@ const ServiceForm = () => {
       setLoading(true);
       setError('');
       
-      const response = await fetch(`${API_BASE_URL}/services/${serviceId}`);
-      
-      if (!response.ok) {
-        throw new Error('Service not found');
-      }
-      
-      const service = await response.json();
+      const { data: service } = await api.get(`/admin/services/${serviceId}`);
       setFormData({
         name: service.name,
         description: service.description,
@@ -107,16 +100,9 @@ const ServiceForm = () => {
       const formDataUpload = new FormData();
       formDataUpload.append('image', file);
 
-      const response = await fetch(`${API_BASE_URL}/upload`, {
-        method: 'POST',
-        body: formDataUpload,
-      });
+      const { data } = await api.post<ImageUploadResponse>('/admin/upload', formDataUpload);
 
-      if (!response.ok) {
-        throw new Error('Failed to upload image');
-      }
-
-      const { imageUrl }: ImageUploadResponse = await response.json();
+      const { imageUrl } = data;
       setFormData(prev => ({
         ...prev,
         image: imageUrl
@@ -186,23 +172,10 @@ const ServiceForm = () => {
         duration: parseInt(formData.duration as any)
       };
 
-      const url = isEditing 
-        ? `${API_BASE_URL}/services/${serviceId}`
-        : `${API_BASE_URL}/services`;
-      
-      const method: 'PUT' | 'POST' = isEditing ? 'PUT' : 'POST';
-
-      const response: Response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submitData),
-      });
-
-      if (!response.ok) {
-        const errorData: ErrorResponse = await response.json();
-        throw new Error(errorData.error || 'Failed to save service');
+      if (isEditing) {
+        await api.put(`/admin/services/${serviceId}`, submitData);
+      } else {
+        await api.post('/admin/services', submitData);
       }
 
       setSuccess(isEditing ? 'Service updated successfully!' : 'Service created successfully!');
@@ -226,7 +199,7 @@ const ServiceForm = () => {
   if (loading && isEditing && !formData.name) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader className="h-8 w-8 animate-spin text-blue-700" />
         <span className="ml-2 text-gray-600">Loading service...</span>
       </div>
     );
@@ -298,7 +271,7 @@ const ServiceForm = () => {
                     id="name"
                     value={formData.name}
                     onChange={handleChange}
-                    className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm rounded-md ${
+                    className={`shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm rounded-md ${
                       errors.name ? 'border-red-300' : 'border-gray-300'
                     }`}
                     placeholder="Enter service name"
@@ -318,7 +291,7 @@ const ServiceForm = () => {
                     rows={4}
                     value={formData.description}
                     onChange={handleChange}
-                    className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm rounded-md ${
+                    className={`shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm rounded-md ${
                       errors.description ? 'border-red-300' : 'border-gray-300'
                     }`}
                     placeholder="Describe your service in detail"
@@ -338,7 +311,7 @@ const ServiceForm = () => {
                     id="image"
                     value={formData.image}
                     onChange={handleChange}
-                    className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm rounded-md ${
+                    className={`shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm rounded-md ${
                       errors.image ? 'border-red-300' : 'border-gray-300'
                     }`}
                     placeholder="Enter image URL or upload below"
@@ -360,12 +333,12 @@ const ServiceForm = () => {
                     />
                     <label
                       htmlFor="file-upload"
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 cursor-pointer"
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       {uploading ? 'Uploading...' : 'Choose File'}
                     </label>
-                    {uploading && <Loader className="h-4 w-4 animate-spin text-blue-600" />}
+                    {uploading && <Loader className="h-4 w-4 animate-spin text-blue-700" />}
                   </div>
                 </div>
               </div>
@@ -399,7 +372,7 @@ const ServiceForm = () => {
                     step="0.01"
                     value={formData.price}
                     onChange={handleChange}
-                    className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm rounded-md ${
+                    className={`shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm rounded-md ${
                       errors.price ? 'border-red-300' : 'border-gray-300'
                     }`}
                     placeholder="0.00"
@@ -420,7 +393,7 @@ const ServiceForm = () => {
                     min="0"
                     value={formData.duration}
                     onChange={handleChange}
-                    className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm rounded-md ${
+                    className={`shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm rounded-md ${
                       errors.duration ? 'border-red-300' : 'border-gray-300'
                     }`}
                     placeholder="60"
@@ -437,7 +410,7 @@ const ServiceForm = () => {
                     type="checkbox"
                     checked={formData.available}
                     onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-blue-700 focus:ring-blue-600 border-gray-300 rounded"
                   />
                   <label htmlFor="available" className="ml-2 block text-sm text-gray-700">
                     Available for booking
@@ -453,14 +426,14 @@ const ServiceForm = () => {
           <button
             type="button"
             onClick={handleBack}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Coffee, Plus, Search, Filter, Edit, Trash2, Eye, XCircle, Loader, AlertCircle } from 'lucide-react';
-
-const API_BASE_URL = 'https://api.nirwanastays.com/admin';
+import { api } from '../lib/apiClient';
 
 const Services = () => {
   const [services, setServices] = useState<Service[]>([]);
@@ -29,13 +28,9 @@ const Services = () => {
       params.append('sortBy', sortBy);
       params.append('sortOrder', sortOrder);
 
-      const response = await fetch(`${API_BASE_URL}/services?${params}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch services');
-      }
-      
-      const data = await response.json();
+      const { data } = await api.get('/admin/services', {
+        params: Object.fromEntries(params.entries()),
+      });
       setServices(data);
     } catch (err) {
       setError(
@@ -72,13 +67,7 @@ const Services = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/services/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete service');
-      }
+      await api.delete(`/admin/services/${id}`);
 
       // Remove service from local state
       setServices((services: Service[]) => services.filter((service: Service) => service.id !== id));
@@ -136,7 +125,7 @@ const Services = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader className="h-8 w-8 animate-spin text-blue-700" />
         <span className="ml-2 text-gray-600">Loading services...</span>
       </div>
     );
@@ -152,7 +141,7 @@ const Services = () => {
         <div className="mt-4 sm:mt-0">
           <button
             onClick={() => window.location.href = '/services/new'}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Service
@@ -192,7 +181,7 @@ const Services = () => {
             placeholder="Search services..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
           />
           {searchTerm && (
             <button
@@ -206,7 +195,7 @@ const Services = () => {
         <button
           type="button"
           onClick={() => setFilterOpen(!filterOpen)}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
         >
           <Filter className="h-4 w-4 mr-2" />
           Filter
@@ -223,7 +212,7 @@ const Services = () => {
               <select 
                 value={filters.priceRange}
                 onChange={(e) => setFilters({...filters, priceRange: e.target.value})}
-                className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
               >
                 <option value="">Any Price</option>
                 <option value="budget">Budget (Below ₹1,000)</option>
@@ -236,7 +225,7 @@ const Services = () => {
               <select 
                 value={filters.availability}
                 onChange={(e) => setFilters({...filters, availability: e.target.value})}
-                className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
               >
                 <option value="">All</option>
                 <option value="available">Available</option>
@@ -252,7 +241,7 @@ const Services = () => {
                   setSortBy(field);
                   setSortOrder(order);
                 }}
-                className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
               >
                 <option value="created_at-DESC">Newest First</option>
                 <option value="created_at-ASC">Oldest First</option>
@@ -267,14 +256,14 @@ const Services = () => {
             <button
               type="button"
               onClick={handleResetFilters}
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
             >
               Reset
             </button>
             <button
               type="button"
               onClick={handleApplyFilters}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
             >
               Apply
             </button>
@@ -320,7 +309,7 @@ const Services = () => {
               <div className="mt-4 flex space-x-2">
                 <button
                   onClick={() => window.location.href = `/services/${service.id}`}
-                  className="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
                 >
                   <Edit className="h-4 w-4 mr-1" />
                   Edit
@@ -331,7 +320,7 @@ const Services = () => {
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
-                <button className="inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <button className="inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600">
                   <Eye className="h-4 w-4" />
                 </button>
               </div>
@@ -353,7 +342,7 @@ const Services = () => {
             <div className="mt-6">
               <button
                 onClick={() => window.location.href = '/services/new'}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Service

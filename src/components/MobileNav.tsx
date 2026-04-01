@@ -1,20 +1,63 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Building2, Image, Coffee, Calendar, Ticket, FileText, Grid, Package, Users } from 'lucide-react';
+import {
+  Home,
+  Building2,
+  Image,
+  Calendar,
+  Ticket,
+  FileText,
+  Package,
+  Users,
+  Wifi,
+  MapPin,
+  Star,
+  Car,
+  Megaphone,
+  Coffee,
+} from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { NAV_ITEMS, navItemVisible } from '../lib/permissions';
 
+const iconFor = (name: string) => {
+  const map: Record<string, React.ReactNode> = {
+    Dashboard: <Home size={20} />,
+    Properties: <Building2 size={20} />,
+    Gallery: <Image size={20} />,
+    Bookings: <Calendar size={20} />,
+    'Cab Bookings': <Car size={20} />,
+    Cabs: <Car size={20} />,
+    Packages: <Package size={20} />,
+    'Package Bookings': <Package size={20} />,
+    Calendar: <Calendar size={20} />,
+    Amenities: <Wifi size={20} />,
+    Cities: <MapPin size={20} />,
+    Ratings: <Star size={20} />,
+    Coupons: <Ticket size={20} />,
+    'Exclusive offers': <Megaphone size={20} />,
+    Blogs: <FileText size={20} />,
+    Services: <Coffee size={20} />,
+    Users: <Users size={20} />,
+  };
+  return map[name] || <Home size={20} />;
+};
+
+/** Bottom nav: first few items the user can access (same rules as sidebar). */
 const MobileNav: React.FC = () => {
-  const navItems = [
-    { name: 'Dashboard', path: '/', icon: <Home size={20} /> },
-    { name: 'Accommodations', path: '/accommodations', icon: <Building2 size={20} /> },
-    { name: 'Bookings', path: '/bookings', icon: <Calendar size={20} /> },
-    { name: 'Coupons', path: '/coupons', icon: <Ticket size={20} /> },
-    { name: 'Users', path: '/users', icon: <Users size={20} /> },
-  ];
+  const { user } = useAuth();
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => user && navItemVisible(user, item.permissionKey)
+  ).slice(0, 5);
+
+  if (!user || visibleItems.length === 0) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
-      <div className="grid grid-cols-5">
-        {navItems.map((item) => (
+    <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-gray-200 bg-white md:hidden">
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: `repeat(${visibleItems.length}, minmax(0, 1fr))` }}
+      >
+        {visibleItems.map((item) => (
           <NavLink
             key={item.name}
             to={item.path}
@@ -24,8 +67,8 @@ const MobileNav: React.FC = () => {
               }`
             }
           >
-            <div>{item.icon}</div>
-            <span className="text-xs mt-1">{item.name}</span>
+            <div>{iconFor(item.name)}</div>
+            <span className="mt-1 text-xs">{item.name}</span>
           </NavLink>
         ))}
       </div>

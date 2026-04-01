@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Building2, 
-  Image, 
-  Coffee, 
-  Calendar, 
-  TrendingUp, 
-  Users, 
+import {
+  Building2,
+  Image,
+  Coffee,
+  Calendar,
+  TrendingUp,
+  Users,
   DollarSign,
   RefreshCw,
   AlertCircle
+
 } from 'lucide-react';
+import { api } from '../lib/apiClient';
 
 // StatCard Component
 type StatCardProps = {
@@ -23,7 +25,7 @@ type StatCardProps = {
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, trend, loading = false }) => {
   const isPositive = trend === 'up';
-  
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center justify-between">
@@ -44,9 +46,8 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, trend, 
           <div className="animate-pulse h-4 w-full bg-gray-200 rounded"></div>
         ) : (
           <>
-            <div className={`flex items-center text-sm ${
-              isPositive ? 'text-green-600' : 'text-red-600'
-            }`}>
+            <div className={`flex items-center text-sm ${isPositive ? 'text-green-600' : 'text-red-600'
+              }`}>
               <TrendingUp className="h-4 w-4 mr-1" />
               <span className="font-medium">{change}</span>
             </div>
@@ -76,11 +77,11 @@ type RecentBookingsTableProps = {
   onRetry?: () => void;
 };
 
-const RecentBookingsTable: React.FC<RecentBookingsTableProps> = ({ 
-  bookings, 
-  loading, 
+const RecentBookingsTable: React.FC<RecentBookingsTableProps> = ({
+  bookings,
+  loading,
   error,
-  onRetry 
+  onRetry
 }) => {
   const getStatusColor = (status: string): string => {
     switch (status) {
@@ -127,7 +128,7 @@ const RecentBookingsTable: React.FC<RecentBookingsTableProps> = ({
           {onRetry && (
             <button
               onClick={onRetry}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
             >
               Retry
             </button>
@@ -213,7 +214,7 @@ type QuickAccessCardProps = {
 
 const QuickAccessCard: React.FC<QuickAccessCardProps> = ({ title, count, icon, link, loading }) => {
   return (
-    <a 
+    <a
       href={link}
       className="bg-white rounded-lg shadow p-4 transition-all hover:shadow-lg hover:-translate-y-1"
     >
@@ -242,14 +243,14 @@ const Dashboard = () => {
     websiteVisitors: '0',
     visitorsChange: '+0%'
   });
-  
+
   const [quickStats, setQuickStats] = useState({
     accommodations: 0,
     gallery: 0,
     services: 0,
     todayBookings: 0
   });
-  
+
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
   const [loadingStates, setLoadingStates] = useState({
     stats: true,
@@ -262,28 +263,17 @@ const Dashboard = () => {
     recentBookings: null as string | null
   });
 
-  const admin_BASE_URL = 'https://api.nirwanastays.com/admin';
+  // const admin_BASE_URL = 'https://api.oraastay.com/api/admin'; 
+  // API URL imported from config
   const RETRY_DELAY = 3000; // 3 seconds
   const MAX_RETRIES = 3;
   const REQUEST_TIMEOUT = 8000; // 8 seconds
 
   // Enhanced fetch with timeout and retry
   const fetchWithRetry = async (endpoint: string, retries = MAX_RETRIES): Promise<any> => {
-    // Commented out API calls - return mock data instead
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-      
-      const response = await fetch(`${admin_BASE_URL}${endpoint}`, {
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
+      const { data } = await api.get(endpoint, { timeout: REQUEST_TIMEOUT });
+      return data;
     } catch (err) {
       if (retries > 0) {
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
@@ -291,7 +281,7 @@ const Dashboard = () => {
       }
       throw err;
     }
-    
+
     // Return mock data based on endpoint
     // if (endpoint.includes('stats')) {
     //   return {
@@ -409,7 +399,7 @@ const Dashboard = () => {
         <button
           onClick={refreshAll}
           disabled={anyLoading}
-          className="flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${anyLoading ? 'animate-spin' : ''}`} />
           Refresh
@@ -438,68 +428,68 @@ const Dashboard = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          title="Total Bookings" 
-          value={stats.totalBookings} 
-          change={stats.bookingChange} 
-          icon={<Calendar className="h-6 w-6 text-nature-600" />} 
-          trend="up" 
+        <StatCard
+          title="Total Bookings"
+          value={stats.totalBookings}
+          change={stats.bookingChange}
+          icon={<Calendar className="h-6 w-6 text-nature-600" />}
+          trend="up"
           loading={loadingStates.stats}
         />
-        <StatCard 
-          title="Occupancy Rate" 
-          value={stats.occupancyRate} 
-          change={stats.occupancyChange} 
-          icon={<Building2 className="h-6 w-6 text-amber-600" />} 
-          trend="up" 
+        <StatCard
+          title="Occupancy Rate"
+          value={stats.occupancyRate}
+          change={stats.occupancyChange}
+          icon={<Building2 className="h-6 w-6 text-amber-600" />}
+          trend="up"
           loading={loadingStates.stats}
         />
-        <StatCard 
-          title="Revenue" 
-          value={stats.revenue} 
-          change={stats.revenueChange} 
-          icon={<DollarSign className="h-6 w-6 text-nature-700" />} 
-          trend="up" 
+        <StatCard
+          title="Revenue"
+          value={stats.revenue}
+          change={stats.revenueChange}
+          icon={<DollarSign className="h-6 w-6 text-nature-700" />}
+          trend="up"
           loading={loadingStates.stats}
         />
-        <StatCard 
-          title="Website Visitors" 
-          value={stats.websiteVisitors} 
-          change={stats.visitorsChange} 
-          icon={<Users className="h-6 w-6 text-nature-500" />} 
-          trend="up" 
+        <StatCard
+          title="Website Visitors"
+          value={stats.websiteVisitors}
+          change={stats.visitorsChange}
+          icon={<Users className="h-6 w-6 text-nature-500" />}
+          trend="up"
           loading={loadingStates.stats}
         />
       </div>
 
       {/* Quick Access Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <QuickAccessCard 
-          title="Accommodations" 
-          count={quickStats.accommodations} 
-          icon={<Building2 className="h-10 w-10 text-nature-600" />} 
-          link="/accommodations" 
+        <QuickAccessCard
+          title="Accommodations"
+          count={quickStats.accommodations}
+          icon={<Building2 className="h-10 w-10 text-nature-600" />}
+          link="/accommodations"
           loading={loadingStates.quickStats}
         />
-        <QuickAccessCard 
-          title="Gallery" 
-          count={quickStats.gallery} 
-          icon={<Image className="h-10 w-10 text-nature-500" />} 
-          link="/gallery" 
+        <QuickAccessCard
+          title="Gallery"
+          count={quickStats.gallery}
+          icon={<Image className="h-10 w-10 text-nature-500" />}
+          link="/gallery"
           loading={loadingStates.quickStats}
         />
-        <QuickAccessCard 
-          title="Services" 
-          count={quickStats.services} 
-          icon={<Coffee className="h-10 w-10 text-amber-600" />} 
-          link="/services" 
+        <QuickAccessCard
+          title="Services"
+          count={quickStats.services}
+          icon={<Coffee className="h-10 w-10 text-amber-600" />}
+          link="/services"
           loading={loadingStates.quickStats}
         />
-        <QuickAccessCard 
-          title="Today's Bookings" 
-          count={quickStats.todayBookings} 
-          icon={<Calendar className="h-10 w-10 text-nature-700" />} 
-          link="/bookings" 
+        <QuickAccessCard
+          title="Today's Bookings"
+          count={quickStats.todayBookings}
+          icon={<Calendar className="h-10 w-10 text-nature-700" />}
+          link="/bookings"
           loading={loadingStates.quickStats}
         />
       </div>
@@ -510,9 +500,9 @@ const Dashboard = () => {
           <h3 className="text-lg font-medium leading-6 text-gray-900">Recent Bookings</h3>
           <p className="mt-1 text-sm text-gray-500">Latest 5 bookings from guests</p>
         </div>
-        <RecentBookingsTable 
-          bookings={recentBookings} 
-          loading={loadingStates.recentBookings} 
+        <RecentBookingsTable
+          bookings={recentBookings}
+          loading={loadingStates.recentBookings}
           error={errors.recentBookings}
           onRetry={fetchRecentBookings}
         />

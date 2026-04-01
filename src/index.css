@@ -4,9 +4,16 @@
 
 @layer base {
   *, *::before, *::after { @apply box-border; }
+  @media (max-width: 767px) {
+    html {
+      font-size: 92.5%;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+  }
   html, body { @apply h-full m-0 p-0; }
   html, body, #root { @apply w-full max-w-full overflow-x-hidden; }
-  html, body, #root { background: #0b0b0b; } /* your bg */
+  html, body, #root { background: #0f172a; } /* dark blue bg */
 }
 *{
   scrollbar-width: thin;

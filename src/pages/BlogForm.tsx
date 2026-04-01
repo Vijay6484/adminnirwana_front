@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Upload, Loader, AlertCircle, Image as ImageIcon, Plus, Trash2, XCircle, CheckCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
-
-const API_BASE_URL = 'https://api.nirwanastays.com/admin/blogs';
+import { api } from '../lib/apiClient';
+import { API_BASE_URL } from '../config';
 
 interface ContentItem {
   type: 'paragraph' | 'heading' | 'list';
@@ -62,13 +62,7 @@ const BlogForm: React.FC = () => {
   const fetchBlog = async () => {
     try {
       setFetching(true);
-      const response = await fetch(`${API_BASE_URL}/${id}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch blog');
-      }
-      
-      const blog = await response.json();
+      const { data: blog } = await api.get(`/admin/blogs/${id}`);
       
       setFormData({
         title: blog.title || '',
@@ -290,20 +284,11 @@ const BlogForm: React.FC = () => {
         }
       }
 
-      const url = isEditing ? `${API_BASE_URL}/${id}` : API_BASE_URL;
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        body: submitData
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save blog');
+      if (isEditing) {
+        await api.put(`/admin/blogs/${id}`, submitData);
+      } else {
+        await api.post('/admin/blogs', submitData);
       }
-
-      const result = await response.json();
       
       Swal.fire({
         icon: 'success',
@@ -332,7 +317,7 @@ const BlogForm: React.FC = () => {
   const getImageUrl = (image: string) => {
     if (!image) return '';
     if (image.startsWith('http')) return image;
-    if (image.startsWith('/uploads')) return `https://api.nirwanastays.com${image}`;
+    if (image.startsWith('/uploads')) return `${API_BASE_URL}${image}`;
     return image;
   };
 

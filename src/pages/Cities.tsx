@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Plus, Trash2, Edit } from 'lucide-react';
+import { api } from '../lib/apiClient';
 
 interface Location {
   id: number;
@@ -21,64 +22,26 @@ const Locations = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const API_BASE_URL = 'https://api.nirwanastays.com/admin/cities';
-
-  // Fetch locations from the server
+  // Fetch locations from the server (backend may return [] until cities API is implemented)
   useEffect(() => {
     const fetchLocations = async () => {
-      console.log('🚀 Starting to fetch locations from:', API_BASE_URL);
-      
       try {
-        console.log('📡 Making fetch request...');
-        const response = await fetch(API_BASE_URL, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
-        });
-        
-        console.log('📥 Response received:', {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok,
-          contentType: response.headers.get('content-type')
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        console.log(' Parsing JSON...');
-        const result: ApiResponse = await response.json();
-        console.log(' Parsed result:', result);
-        
-        // Handle the consistent API response structure
-        if (result.success && Array.isArray(result.data)) {
-          console.log(' Success format detected, setting locations:', result.data);
-          setLocations(result.data);
-          setError(''); // Clear any previous errors
+        const { data: result } = await api.get<ApiResponse | Location[]>('/admin/properties/cities');
+        if (result && typeof result === 'object' && 'success' in result && Array.isArray((result as ApiResponse).data)) {
+          setLocations((result as ApiResponse).data);
+          setError('');
         } else if (Array.isArray(result)) {
-          // Fallback for direct array response
-          console.log(' Direct array format, setting locations:', result);
-          setLocations(result as unknown as Location[]);
+          setLocations(result as Location[]);
           setError('');
         } else {
-          console.log(' Unexpected response format:', result);
-          throw new Error((result as any).message || 'Unexpected response format');
+          setLocations([]);
+          setError('');
         }
       } catch (err) {
-        console.error(' Error fetching locations:', err);
         const errorMessage = err instanceof Error ? err.message : String(err);
-        console.error('Error details:', {
-          name: err instanceof Error ? err.name : 'Unknown',
-          message: errorMessage,
-          stack: err instanceof Error ? err.stack : ''
-        });
         setError(errorMessage);
-        setLocations([]); // Set empty array on error
+        setLocations([]);
       } finally {
-        console.log('🏁 Fetch completed, setting loading to false');
         setLoading(false);
       }
     };
@@ -89,19 +52,9 @@ const Locations = () => {
   const handleDelete = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this location?')) {
       try {
-        console.log('🗑️ Deleting location with ID:', id);
-        const response = await fetch(`${API_BASE_URL}/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        const result = await response.json();
-        console.log('Delete response:', result);
-        
-        if (!response.ok || !result.success) {
-          throw new Error(result.message || 'Failed to delete location');
+        const { data: result } = await api.delete(`/admin/properties/cities/${id}`);
+        if (!(result as { success?: boolean }).success) {
+          throw new Error((result as { message?: string }).message || 'Failed to delete location');
         }
         
         // Remove from local state
@@ -117,24 +70,14 @@ const Locations = () => {
   const handleAdd = async () => {
     if (newLocation.name.trim() && newLocation.country.trim()) {
       try {
-        console.log('➕ Adding new location:', newLocation);
-        const response = await fetch(API_BASE_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: newLocation.name.trim(),
-            country: newLocation.country.trim(),
-            active: true,
-          }),
+        const { data: result } = await api.post('/admin/properties/cities', {
+          name: newLocation.name.trim(),
+          country: newLocation.country.trim(),
+          active: true,
         });
 
-        const result = await response.json();
-        console.log('Add response:', result);
-
-        if (!response.ok || !result.success) {
-          throw new Error(result.message || 'Failed to add location');
+        if (!(result as { success?: boolean }).success) {
+          throw new Error((result as { message?: string }).message || 'Failed to add location');
         }
 
         // Add to local state
@@ -239,7 +182,7 @@ const Locations = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900">
+                      <button className="text-blue-700 hover:text-blue-900">
                         <Edit className="h-5 w-5" />
                       </button>
                       <button
@@ -280,7 +223,7 @@ const Locations = () => {
                       type="text"
                       value={newLocation.name}
                       onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                       placeholder="Enter location name"
                     />
                   </div>
@@ -290,7 +233,7 @@ const Locations = () => {
                       type="text"
                       value={newLocation.country}
                       onChange={(e) => setNewLocation({ ...newLocation, country: e.target.value })}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-600 focus:border-blue-600 sm:text-sm"
                       placeholder="Enter country name"
                     />
                   </div>
@@ -301,7 +244,7 @@ const Locations = () => {
                   type="button"
                   onClick={handleAdd}
                   disabled={!newLocation.name.trim() || !newLocation.country.trim()}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Add Location
                 </button>
@@ -312,7 +255,7 @@ const Locations = () => {
                     setNewLocation({ name: '', country: '' });
                     setError('');
                   }}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Cancel
                 </button>

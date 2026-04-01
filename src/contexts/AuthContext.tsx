@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState } from 'react';
-import bcrypt from 'bcryptjs';
+import { API_BASE_URL } from '../config';
 
-interface User {
+export interface User {
   id: string;
   name: string;
   phoneNumber: string;
   email: string;
   role: string;
+  permissions?: string[];
 }
 
 interface LoginResult {
@@ -41,52 +42,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<LoginResult> => {
     setIsLoading(true);
     try {
-      let users: any[] = [];
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
 
-      // Always try fresh API call
-      const response = await fetch('https://api.nirwanastays.com/admin/users');
-      if (response.ok) {
-        users = await response.json();
-      }
+      const data = await response.json().catch(() => ({}));
 
-      // ❌ No users from API → reject login immediately
-      if (!users || users.length === 0) {
+      if (!response.ok || !data.success || !data.token) {
         setIsLoading(false);
         return { success: false };
       }
 
-      // Match by email or phone
-      const matchedUser = users.find(
-        (u: any) => u.email === email.trim() || u.phoneNumber === email.trim()
-      );
-      console.log('Matched user:', matchedUser);
-      if (!matchedUser) {
-        setIsLoading(false);
-        return { success: false };
-      }
-
-      // Check password
-      const isPasswordMatch = await bcrypt.compare(password, matchedUser.password);
-      console.log('Password match:', isPasswordMatch);
-      if (!isPasswordMatch) {
-        setIsLoading(false);
-        return { success: false };
-      }
-
-      // ✅ Store only this matched user
       const authUser: User = {
-        id: matchedUser.id,
-        name: matchedUser.name,
-        phoneNumber: matchedUser.phoneNumber,
-        email: matchedUser.email,
-        role: matchedUser.role,
+        id: data.user.id,
+        name: data.user.name,
+        phoneNumber: data.user.phoneNumber || '',
+        email: data.user.email,
+        role: data.user.role,
+        permissions: data.user.permissions || [],
       };
 
-      setUser(authUser);
+      localStorage.setItem('authToken', data.token);
       localStorage.setItem('authUser', JSON.stringify(authUser));
-
+      setUser(authUser);
       setIsLoading(false);
-      return { success: true, role: matchedUser.role };
+      return { success: true, role: authUser.role };
     } catch (err) {
       console.error('Login error:', err);
       setIsLoading(false);
@@ -97,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('authUser');
+    localStorage.removeItem('authToken');
   };
 
   return (

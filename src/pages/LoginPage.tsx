@@ -28,11 +28,7 @@ const LoginPage: React.FC = () => {
       return;
     }
 
-    if (result.role === 'manager') {
-      navigate('/calendar'); // 🚀 go directly to calendar
-    } else {
-      navigate('/'); // default
-    }
+    navigate('/');
   };
 
   return (

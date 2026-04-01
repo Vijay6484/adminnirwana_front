@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Save, Loader, Upload } from 'lucide-react';
+import { ArrowLeft, User, Save, Loader } from 'lucide-react';
+import { api } from '../lib/apiClient';
+import { STAFF_PERMISSION_OPTIONS } from '../lib/permissions';
 
 interface UserData {
   name: string;
   email: string;
+  phoneNumber: string;
   role: string;
   status: string;
   avatar?: string;
   password?: string;
   confirmPassword?: string;
+  permissions?: string[];
 }
 
 const UserForm: React.FC = () => {
@@ -22,11 +26,13 @@ const UserForm: React.FC = () => {
   const [formData, setFormData] = useState<UserData>({
     name: '',
     email: '',
+    phoneNumber: '',
     role: 'staff',
     status: 'active',
     avatar: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    permissions: [],
   });
 
   useEffect(() => {
@@ -38,13 +44,13 @@ const UserForm: React.FC = () => {
   const fetchUser = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`https://api.nirwanastays.com/admin/users/${id}`);
-      if (!response.ok) throw new Error('User not found');
-      const data = await response.json();
+      const { data } = await api.get(`/admin/users/${id}`);
       setFormData({
         ...data,
+        phoneNumber: data.phoneNumber || '',
+        permissions: data.permissions || [],
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
       });
     } catch (err) {
       console.error('Error fetching user:', err);
@@ -56,10 +62,23 @@ const UserForm: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    if (name === 'role' && value !== 'staff') {
+      setFormData((prev) => ({ ...prev, role: value, permissions: [] }));
+      return;
+    }
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
+  };
+
+  const toggleStaffPermission = (key: string) => {
+    setFormData((prev) => {
+      const set = new Set(prev.permissions || []);
+      if (set.has(key)) set.delete(key);
+      else set.add(key);
+      return { ...prev, permissions: Array.from(set) };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,26 +94,27 @@ const UserForm: React.FC = () => {
       setLoading(true);
       setError('');
 
-      const submitData = { ...formData };
-      if (!submitData.password) {
-        delete submitData.password;
-        delete submitData.confirmPassword;
+      const submitData: Record<string, unknown> = {
+        name: formData.name,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        role: formData.role,
+        status: formData.status === 'inactive' ? 'inactive' : 'active',
+        avatar: formData.avatar,
+        permissions: formData.role === 'staff' ? formData.permissions || [] : [],
+      };
+      if (formData.password) {
+        submitData.password = formData.password;
       }
 
-      const url = isEditing
-        ? `https://api.nirwanastays.com/admin/users/${id}`
-        : 'https://api.nirwanastays.com/admin/users';
-
-      const response = await fetch(url, {
-        method: isEditing ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(submitData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save user');
+      if (isEditing) {
+        await api.put(`/admin/users/${id}`, submitData);
+      } else {
+        if (!formData.password) {
+          setError('Password is required for new users');
+          return;
+        }
+        await api.post('/admin/users', submitData);
       }
 
       navigate('/users');
@@ -179,7 +199,7 @@ const UserForm: React.FC = () => {
                     value={formData.avatar}
                     onChange={handleChange}
                     placeholder="Enter avatar URL"
-                    className="flex-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="flex-1 shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                   />
                 </div>
               </div>
@@ -196,7 +216,7 @@ const UserForm: React.FC = () => {
                     required
                     value={formData.name}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300  rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300  rounded-md"
                   />
                 </div>
               </div>
@@ -213,7 +233,23 @@ const UserForm: React.FC = () => {
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div className="sm:col-span-3">
+                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+                  Phone
+                </label>
+                <div className="mt-1">
+                  <input
+                    type="text"
+                    name="phoneNumber"
+                    id="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                   />
                 </div>
               </div>
@@ -229,7 +265,7 @@ const UserForm: React.FC = () => {
                     required
                     value={formData.role}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                   >
                     <option value="admin">Admin</option>
                     <option value="manager">Manager</option>
@@ -237,6 +273,25 @@ const UserForm: React.FC = () => {
                   </select>
                 </div>
               </div>
+
+              {formData.role === 'staff' && (
+                <div className="sm:col-span-6 border border-gray-200 rounded-md p-3 max-h-48 overflow-y-auto">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Page access</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {STAFF_PERMISSION_OPTIONS.map((opt) => (
+                      <label key={opt.key} className="flex items-center gap-2 text-sm text-gray-600">
+                        <input
+                          type="checkbox"
+                          checked={(formData.permissions || []).includes(opt.key)}
+                          onChange={() => toggleStaffPermission(opt.key)}
+                          className="rounded border-gray-300"
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="sm:col-span-3">
                 <label htmlFor="status" className="block text-sm font-medium text-gray-700">
@@ -249,7 +304,7 @@ const UserForm: React.FC = () => {
                     required
                     value={formData.status}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -270,7 +325,7 @@ const UserForm: React.FC = () => {
                     required={!isEditing}
                     value={formData.password}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                   />
                 </div>
               </div>
@@ -287,7 +342,7 @@ const UserForm: React.FC = () => {
                     required={!isEditing}
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-blue-600 focus:border-blue-600 block w-full sm:text-sm border-gray-300 rounded-md"
                   />
                 </div>
               </div>
@@ -299,14 +354,14 @@ const UserForm: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/users')}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 disabled:opacity-50"
           >
             {loading ? (
               <>

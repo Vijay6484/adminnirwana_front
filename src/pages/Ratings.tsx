@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Star, Building2, User, Calendar, Trash2, Plus, Upload, X, Save, Loader } from 'lucide-react';
+import { Star, Trash2, Plus, X, Save, Loader, Eye, EyeOff } from 'lucide-react';
+import { api } from '../lib/apiClient';
 
 interface Rating {
-  id: number;
+  id: string;
   guestName: string;
   guestPhoto: string;
   rating: number;
   review: string;
   location: string;
   date: string;
+  isActive?: boolean;
 }
 
 interface NewRating {
@@ -20,44 +21,11 @@ interface NewRating {
   location: string;
 }
 
-// Axios instance with base configuration
-const api = axios.create({
-  baseURL: 'https://api.nirwanastays.com',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add auth token if needed
-api.interceptors.request.use(
-  (config) => {
-    // You can add authentication tokens here if required
-    // const token = localStorage.getItem('authToken');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for error handling
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error('API Error:', error.response?.data || error.message);
-    return Promise.reject(error);
-  }
-);
-
 const Ratings = () => {
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [newRating, setNewRating] = useState<NewRating>({
     guestName: '',
     guestPhoto: '',
@@ -72,15 +40,15 @@ const Ratings = () => {
     setError(null);
     try {
       const response = await api.get('/admin/ratings');
-      // Transform API data to match our interface
       const transformedData: Rating[] = response.data.map((item: any) => ({
-        id: item.id,
+        id: item.id || item._id,
         guestName: item.guestName,
         guestPhoto: item.image,
         rating: item.rating,
         review: item.review,
         location: item.propertyName,
-        date: item.date
+        date: item.date,
+        isActive: item.isActive !== false
       }));
       setRatings(transformedData);
     } catch (err: any) {
@@ -95,7 +63,16 @@ const Ratings = () => {
     fetchRatings();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleToggleActive = async (id: string, currentActive: boolean) => {
+    try {
+      const response = await api.patch(`/admin/ratings/${id}`, { isActive: !currentActive });
+      setRatings(ratings.map(r => r.id === id ? { ...r, isActive: response.data.isActive } : r));
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to update visibility');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this rating?')) {
       try {
         await api.delete(`/admin/ratings/${id}`);
@@ -107,41 +84,8 @@ const Ratings = () => {
     }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      // Create form data for file upload
-      const formData = new FormData();
-      formData.append('image', file);
-
-      // Upload image to server
-      const response = await api.post('/admin/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      setNewRating(prev => ({
-        ...prev,
-        guestPhoto: response.data.imageUrl
-      }));
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to upload photo');
-      console.error('Error uploading photo:', err);
-      
-      // Fallback to mock URL if upload fails
-      const mockPhotoUrl = URL.createObjectURL(file);
-      setNewRating(prev => ({
-        ...prev,
-        guestPhoto: mockPhotoUrl
-      }));
-    } finally {
-      setUploading(false);
-    }
-  };
+  // Replaced file upload with a simple text URL so admins can just paste an image link.
+  // The API now expects a plain `image` string.
 
   const handleAddRating = async () => {
     if (!newRating.guestName || !newRating.review || !newRating.location) {
@@ -161,16 +105,16 @@ const Ratings = () => {
       };
 
       const response = await api.post('/admin/ratings', ratingData);
-      
-      // Add new rating to state
+
       const newRatingWithId: Rating = {
-        id: response.data.id,
+        id: response.data.id || response.data._id,
         guestName: response.data.guestName,
         guestPhoto: response.data.image,
         rating: response.data.rating,
         review: response.data.review,
         location: response.data.propertyName,
-        date: response.data.date
+        date: response.data.date,
+        isActive: response.data.isActive !== false
       };
 
       setRatings([newRatingWithId, ...ratings]);
@@ -192,9 +136,8 @@ const Ratings = () => {
     return [...Array(5)].map((_, index) => (
       <Star
         key={index}
-        className={`h-4 w-4 ${
-          index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-        }`}
+        className={`h-4 w-4 ${index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+          }`}
       />
     ));
   };
@@ -203,9 +146,8 @@ const Ratings = () => {
     return [...Array(5)].map((_, index) => (
       <Star
         key={index}
-        className={`h-6 w-6 cursor-pointer transition-colors ${
-          index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300 hover:text-yellow-200'
-        }`}
+        className={`h-6 w-6 cursor-pointer transition-colors ${index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300 hover:text-yellow-200'
+          }`}
         onClick={() => onRatingChange && onRatingChange(index + 1)}
       />
     ));
@@ -329,6 +271,13 @@ const Ratings = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
+                        onClick={() => handleToggleActive(rating.id, rating.isActive ?? true)}
+                        className={`mr-3 transition-colors ${rating.isActive !== false ? 'text-green-600 hover:text-green-800' : 'text-gray-400 hover:text-gray-600'}`}
+                        title={rating.isActive !== false ? 'Visible on website - click to hide' : 'Hidden - click to show'}
+                      >
+                        {rating.isActive !== false ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                      </button>
+                      <button
                         onClick={() => handleDelete(rating.id)}
                         className="text-red-600 hover:text-red-900 transition-colors"
                         title="Delete Review"
@@ -413,20 +362,12 @@ const Ratings = () => {
                           </div>
                           <div>
                             <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handlePhotoUpload}
-                              className="hidden"
-                              id="photo-upload"
+                              type="text"
+                              value={newRating.guestPhoto}
+                              onChange={(e) => setNewRating({ ...newRating, guestPhoto: e.target.value })}
+                              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-nature-500 focus:border-nature-500 sm:text-sm"
+                              placeholder="Paste image URL here"
                             />
-                            <label
-                              htmlFor="photo-upload"
-                              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nature-500 cursor-pointer"
-                            >
-                              <Upload className="h-4 w-4 mr-2" />
-                              {uploading ? 'Uploading...' : 'Upload Photo'}
-                            </label>
-                            {uploading && <Loader className="h-4 w-4 animate-spin text-nature-600 ml-2" />}
                           </div>
                         </div>
                         <p className="mt-1 text-xs text-gray-500">
@@ -440,7 +381,7 @@ const Ratings = () => {
                           Rating *
                         </label>
                         <div className="mt-1 flex items-center space-x-1">
-                          {renderRatingStars(newRating.rating, (rating) => 
+                          {renderRatingStars(newRating.rating, (rating) =>
                             setNewRating({ ...newRating, rating })
                           )}
                           <span className="ml-2 text-sm text-gray-600">
